@@ -264,15 +264,24 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
 /**
  * Form for Funding a Campaign
  */
-export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string, onSubmit: (amount: number) => void }) {
+export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string, onSubmit: (amount: number) => Promise<void> }) {
   const { isConnected, connect, balance } = useWallet();
   const [amount, setAmount] = React.useState<string>('0.1');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [txError, setTxError] = React.useState<string | null>(null);
 
-  const handleFund = (e: React.FormEvent) => {
+  const handleFund = async (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
-    if (numAmount > 0) {
-      onSubmit(numAmount);
+    if (numAmount <= 0) return;
+    setIsSubmitting(true);
+    setTxError(null);
+    try {
+      await onSubmit(numAmount);
+    } catch (err: unknown) {
+      setTxError(err instanceof Error ? err.message : 'Transaction failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -300,9 +309,9 @@ export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string,
                 <span className="text-muted-foreground">Balance: {balance} ETH</span>
               </div>
               <div className="relative">
-                <Input 
-                  type="number" 
-                  step="0.01" 
+                <Input
+                  type="number"
+                  step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="pr-12 text-lg font-mono"
@@ -313,10 +322,10 @@ export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string,
 
             <div className="grid grid-cols-3 gap-2">
               {['0.1', '0.5', '1.0'].map((val) => (
-                <Button 
-                  key={val} 
-                  type="button" 
-                  variant="secondary" 
+                <Button
+                  key={val}
+                  type="button"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setAmount(val)}
                   className="text-xs"
@@ -326,12 +335,20 @@ export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string,
               ))}
             </div>
 
-            <Button 
-              type="submit" 
+            {txError && (
+              <p className="text-xs text-destructive bg-destructive/10 rounded px-3 py-2">{txError}</p>
+            )}
+
+            <Button
+              type="submit"
               className="w-full h-12 text-md font-semibold gap-2"
-              disabled={parseFloat(amount) > parseFloat(balance)}
+              disabled={isSubmitting || parseFloat(amount) > parseFloat(balance)}
             >
-              {parseFloat(amount) > parseFloat(balance) ? "Insufficient Balance" : "Confirm Investment"}
+              {isSubmitting
+                ? 'Waiting for MetaMask...'
+                : parseFloat(amount) > parseFloat(balance)
+                  ? 'Insufficient Balance'
+                  : 'Confirm Investment'}
               <ArrowUpRight className="h-4 w-4" />
             </Button>
 
@@ -348,8 +365,22 @@ export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string,
 /**
  * Form for Withdrawing Funds (Creator Only)
  */
-export function WithdrawForm({ campaignId, onSubmit }: { campaignId: string, onSubmit: () => void }) {
+export function WithdrawForm({ campaignId, onSubmit }: { campaignId: string, onSubmit: () => Promise<void> }) {
   const { isConnected, connect } = useWallet();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [txError, setTxError] = React.useState<string | null>(null);
+
+  const handleWithdraw = async () => {
+    setIsSubmitting(true);
+    setTxError(null);
+    try {
+      await onSubmit();
+    } catch (err: unknown) {
+      setTxError(err instanceof Error ? err.message : 'Transaction failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Card className="border-destructive/30 bg-destructive/5">
@@ -371,17 +402,22 @@ export function WithdrawForm({ campaignId, onSubmit }: { campaignId: string, onS
           </AlertDescription>
         </Alert>
 
+        {txError && (
+          <p className="text-xs text-destructive bg-destructive/10 rounded px-3 py-2">{txError}</p>
+        )}
+
         {!isConnected ? (
           <Button onClick={connect} variant="outline" className="w-full">
             Connect Wallet
           </Button>
         ) : (
-          <Button 
-            onClick={onSubmit} 
-            variant="destructive" 
+          <Button
+            onClick={handleWithdraw}
+            disabled={isSubmitting}
+            variant="destructive"
             className="w-full font-semibold"
           >
-            Process Withdrawal Request
+            {isSubmitting ? 'Processing on blockchain...' : 'Process Withdrawal Request'}
           </Button>
         )}
       </CardContent>
@@ -502,18 +538,22 @@ export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: any) => vo
 /**
  * Refund Request Form for Failed Campaigns
  */
-export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: { 
-  campaignId: string, 
-  contributionAmount: number, 
-  onSubmit: () => void 
+export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: {
+  campaignId: string,
+  contributionAmount: number,
+  onSubmit: () => Promise<void>
 }) {
   const { isConnected, connect } = useWallet();
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [txError, setTxError] = React.useState<string | null>(null);
 
   const handleRefund = async () => {
     setIsProcessing(true);
+    setTxError(null);
     try {
       await onSubmit();
+    } catch (err: unknown) {
+      setTxError(err instanceof Error ? err.message : 'Transaction failed');
     } finally {
       setIsProcessing(false);
     }
@@ -549,17 +589,21 @@ export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: 
           </AlertDescription>
         </Alert>
 
+        {txError && (
+          <p className="text-xs text-destructive bg-destructive/10 rounded px-3 py-2">{txError}</p>
+        )}
+
         {!isConnected ? (
           <Button onClick={connect} variant="outline" className="w-full">
             Connect Wallet to Claim Refund
           </Button>
         ) : (
-          <Button 
-            onClick={handleRefund} 
+          <Button
+            onClick={handleRefund}
             disabled={isProcessing}
             className="w-full bg-orange-600 hover:bg-orange-700"
           >
-            {isProcessing ? "Processing Refund..." : "Claim Refund"}
+            {isProcessing ? 'Waiting for MetaMask...' : 'Claim Refund'}
           </Button>
         )}
       </CardContent>

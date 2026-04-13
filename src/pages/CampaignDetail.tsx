@@ -1,5 +1,8 @@
 import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { parseEther } from 'ethers';
+import { getStartupFund, ensureRegistered } from '@/lib/contracts';
+import { useWallet } from '@/hooks/useWallet';
 import { 
   Clock, 
   Users, 
@@ -30,7 +33,8 @@ import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/mo
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
-  
+  const { address } = useWallet();
+
   const campaign = useMemo(() => {
     return mockCampaigns.find(c => c.id === id || c.slug === id);
   }, [id]);
@@ -49,7 +53,8 @@ export default function CampaignDetail() {
   }
 
   const progress = Math.min(100, (campaign.raisedAmount / campaign.goalAmount) * 100);
-  const isCreator = false; // Mocking current user context
+  const isCreator = !!(address && campaign.creator.walletAddress &&
+    address.toLowerCase() === campaign.creator.walletAddress.toLowerCase());
   
   const daysLeft = useMemo(() => {
     const now = new Date('2026-02-13T06:26:06Z');
@@ -58,12 +63,21 @@ export default function CampaignDetail() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [campaign.deadline]);
 
-  const handleFundingSubmit = (amount: number) => {
-    console.log(`Funding ${amount} to ${campaign.title}`);
+  const handleFundingSubmit = async (amount: number): Promise<void> => {
+    if (!address) throw new Error('Wallet not connected');
+    await ensureRegistered(address);
+    const contract = await getStartupFund(true);
+    const tx = await contract.fundCampaign(BigInt(campaign.id), {
+      value: parseEther(amount.toString()),
+    });
+    await tx.wait();
   };
 
-  const handleWithdrawSubmit = () => {
-    console.log(`Withdrawing funds for ${campaign.title}`);
+  const handleWithdrawSubmit = async (): Promise<void> => {
+    if (!address) throw new Error('Wallet not connected');
+    const contract = await getStartupFund(true);
+    const tx = await contract.withdraw(BigInt(campaign.id));
+    await tx.wait();
   };
 
   return (

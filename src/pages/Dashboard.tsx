@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { getStartupFund, ensureRegistered } from '@/lib/contracts';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -48,6 +49,14 @@ const fadeInUp = {
 
 export default function Dashboard() {
   const { isConnected, address, balance, shortAddress, connect } = useWallet();
+
+  const handleRefundSubmit = async (campaignId: string): Promise<void> => {
+    if (!address) throw new Error('Wallet not connected');
+    await ensureRegistered(address);
+    const contract = await getStartupFund(true);
+    const tx = await contract.claimRefund(BigInt(campaignId));
+    await tx.wait();
+  };
 
   // Find current mock user based on wallet address
   const currentUser = useMemo(() => {
@@ -371,10 +380,10 @@ export default function Dashboard() {
 
         <TabsContent value="refunds" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RefundRequestForm 
+            <RefundRequestForm
               campaignId="c4"
               contributionAmount={0.5}
-              onSubmit={() => console.log('Processing refund...')}
+              onSubmit={() => handleRefundSubmit('c4')}
             />
           </div>
           

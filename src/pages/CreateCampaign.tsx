@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { parseEther } from 'ethers';
+import { getStartupFund, ensureRegistered } from '@/lib/contracts';
+import { useWallet } from '@/hooks/useWallet';
 import { motion } from 'framer-motion';
 import { 
   Rocket, 
@@ -19,22 +22,56 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export default function CreateCampaign() {
   const navigate = useNavigate();
+  const { address } = useWallet();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [txError, setTxError] = useState<string | null>(null);
 
-  const handleFormSubmit = (data: any) => {
+  const handleFormSubmit = async (data: any) => {
+    if (!address) return;
     setIsSubmitting(true);
-    console.log('Campaign Data Submitted:', data);
-    
-    // Simulate blockchain transaction delay
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setTxError(null);
+
+    try {
+      // Register wallet with AccessControl if first time
+      await ensureRegistered(address);
+
+      // Derive slug from title
+      const slug = data.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      // Convert ETH string → wei BigInt
+      const goalWei = parseEther(data.goalAmount.toString());
+      const minWei  = parseEther(data.minContribution.toString());
+
+      // Convert date string "YYYY-MM-DD" → Unix timestamp (seconds)
+      const deadline = Math.floor(new Date(data.deadline).getTime() / 1000);
+
+      const contract = await getStartupFund(true);
+      const tx = await contract.createCampaign(
+        data.title,
+        slug,
+        data.description,
+        data.shortDescription,
+        data.imageUrl,
+        data.category,
+        goalWei,
+        minWei,
+        deadline,
+        data.tokenSymbol,
+      );
+      await tx.wait();
+
       setShowSuccess(true);
-      // After a delay, navigate to dashboard or the new campaign
-      setTimeout(() => {
-        navigate(ROUTE_PATHS.DASHBOARD);
-      }, 3000);
-    }, 2000);
+      setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
+      setTxError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (showSuccess) {
@@ -132,7 +169,12 @@ export default function CreateCampaign() {
                   </div>
                 </div>
 
-                <CreateCampaignForm onSubmit={handleFormSubmit} />
+                {txError && (
+                  <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+                    {txError}
+                  </div>
+                )}
+                <CreateCampaignForm onSubmit={handleFormSubmit} isSubmitting={isSubmitting} />
               </CardContent>
             </Card>
           </motion.div>

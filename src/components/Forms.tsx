@@ -50,11 +50,12 @@ const createCampaignSchema = z.object({
     message: "Deadline must be in the future",
   }),
   imageUrl: z.string().url("Please provide a valid image URL"),
+  tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
 });
 
 type CreateCampaignValues = z.infer<typeof createCampaignSchema>;
 
-export function CreateCampaignForm({ onSubmit }: { onSubmit: (data: CreateCampaignValues) => void }) {
+export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmit: (data: CreateCampaignValues) => void; isSubmitting?: boolean }) {
   const { isConnected, connect, isConnecting } = useWallet();
   const form = useForm<CreateCampaignValues>({
     resolver: zodResolver(createCampaignSchema),
@@ -65,6 +66,7 @@ export function CreateCampaignForm({ onSubmit }: { onSubmit: (data: CreateCampai
       goalAmount: 1,
       minContribution: 0.01,
       imageUrl: '',
+      tokenSymbol: '',
       deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     },
   });
@@ -129,7 +131,7 @@ export function CreateCampaignForm({ onSubmit }: { onSubmit: (data: CreateCampai
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="goalAmount"
@@ -151,6 +153,24 @@ export function CreateCampaignForm({ onSubmit }: { onSubmit: (data: CreateCampai
                       <FormLabel>Min. Entry (ETH)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tokenSymbol"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Token Symbol</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. EFLOW"
+                          maxLength={6}
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -231,8 +251,8 @@ export function CreateCampaignForm({ onSubmit }: { onSubmit: (data: CreateCampai
           </div>
 
           <div className="pt-6 border-t">
-            <Button type="submit" size="lg" className="w-full md:w-auto px-12 gap-2">
-              <Plus className="h-5 w-5" /> Launch Campaign
+            <Button type="submit" size="lg" disabled={isSubmitting} className="w-full md:w-auto px-12 gap-2">
+              <Plus className="h-5 w-5" /> {isSubmitting ? 'Submitting to blockchain...' : 'Launch Campaign'}
             </Button>
           </div>
         </form>

@@ -8,3 +8,4 @@ export const CONTRACT_ADDRESSES = {
 
 // Chain ID for Ganache
 export const CHAIN_ID = 1337;
+

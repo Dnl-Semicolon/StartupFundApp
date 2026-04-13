@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 interface CampaignCardProps {
   campaign: Campaign;
 }
-
+//ewufgiuweqgfuqgeoufqeiugfiuwegiufgewuiefw
 export function CampaignCard({ campaign }: CampaignCardProps) {
   const progress = Math.min(Math.round((campaign.raisedAmount / campaign.goalAmount) * 100), 100);
   const daysLeft = Math.max(0, Math.ceil((new Date(campaign.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));

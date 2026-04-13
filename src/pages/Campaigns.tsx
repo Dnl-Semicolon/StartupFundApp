@@ -1,0 +1,217 @@
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, SlidersHorizontal, ArrowUpDown, LayoutGrid } from 'lucide-react';
+import { Campaign, CAMPAIGN_STATUS } from '@/lib/index';
+import { CampaignCard } from '@/components/Cards';
+import { mockCampaigns } from '@/data/index';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
+
+const CATEGORIES = ['All', 'Tech', 'Fintech', 'Healthcare', 'Green Energy', 'AI', 'Web3'];
+const SORT_OPTIONS = [
+  { label: 'Newest First', value: 'newest' },
+  { label: 'Ending Soon', value: 'deadline' },
+  { label: 'Highest Goal', value: 'goal_high' },
+  { label: 'Most Funded', value: 'raised_high' },
+];
+
+export default function Campaigns() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('newest');
+
+  const filteredCampaigns = useMemo(() => {
+    return mockCampaigns
+      .filter((campaign) => {
+        const matchesSearch = campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          campaign.shortDescription.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCategory = selectedCategory === 'All' || campaign.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'newest':
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          case 'deadline':
+            return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+          case 'goal_high':
+            return b.goalAmount - a.goalAmount;
+          case 'raised_high':
+            return b.raisedAmount - a.raisedAmount;
+          default:
+            return 0;
+        }
+      });
+  }, [searchQuery, selectedCategory, sortBy]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <section className="relative pt-24 pb-12 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent z-0" />
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial="initial"
+            animate="animate"
+            variants={fadeInUp}
+            className="max-w-3xl"
+          >
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-chart-3">
+              Discover the Future
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              Explore high-potential Web3 and Tech startups curated for institutional-grade funding.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Filter Bar */}
+      <section className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b border-border py-4">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+            {/* Search and Category Tabs */}
+            <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto flex-1">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search campaigns..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-secondary/50 border-none ring-1 ring-border focus-visible:ring-primary"
+                />
+              </div>
+              <Tabs
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+                className="w-full overflow-x-auto"
+              >
+                <TabsList className="bg-secondary/50 p-1">
+                  {CATEGORIES.map((cat) => (
+                    <TabsTrigger
+                      key={cat}
+                      value={cat}
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
+                      {cat}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Sorting and View Toggle */}
+            <div className="flex items-center gap-3 w-full lg:w-auto">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mr-2">
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="hidden sm:inline">Sort by:</span>
+              </div>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:w-[180px] bg-secondary/50 border-none ring-1 ring-border">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" className="hidden sm:flex">
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Campaign Grid */}
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground">{filteredCampaigns.length}</span> active projects
+            </p>
+          </div>
+
+          <AnimatePresence mode="popLayout">
+            {filteredCampaigns.length > 0 ? (
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              >
+                {filteredCampaigns.map((campaign) => (
+                  <motion.div key={campaign.id} variants={staggerItem}>
+                    <CampaignCard campaign={campaign} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex flex-col items-center justify-center py-24 text-center"
+              >
+                <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-6">
+                  <Search className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-2">No campaigns found</h3>
+                <p className="text-muted-foreground max-w-md">
+                  We couldn't find any campaigns matching your current search or filters. Try adjusting your criteria.
+                </p>
+                <Button
+                  variant="link"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('All');
+                  }}
+                  className="mt-4 text-primary"
+                >
+                  Clear all filters
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 bg-secondary/30">
+        <div className="container mx-auto px-4 text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="max-w-2xl mx-auto"
+          >
+            <h2 className="text-3xl font-bold mb-4">Have a groundbreaking idea?</h2>
+            <p className="text-muted-foreground mb-8 text-lg">
+              Join the elite circle of entrepreneurs raising capital on the most transparent crowdfunding platform.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20">
+                Launch Your Campaign
+              </Button>
+              <Button size="lg" variant="outline" className="rounded-full px-8">
+                How it Works
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </div>
+  );
+}

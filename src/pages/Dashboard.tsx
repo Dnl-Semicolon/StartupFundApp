@@ -32,7 +32,8 @@ import {
   TransactionSummary, 
   Transaction 
 } from '@/components/TransactionHistory';
-import { mockCampaigns, mockTransactions, mockUsers } from '@/data/index';
+import { mockTransactions, mockUsers } from '@/data/index';
+import { useCampaigns } from '@/hooks/useCampaigns';
 import { useWallet } from '@/hooks/useWallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +50,7 @@ const fadeInUp = {
 
 export default function Dashboard() {
   const { isConnected, address, balance, shortAddress, connect } = useWallet();
+  const { campaigns } = useCampaigns();
 
   const handleRefundSubmit = async (campaignId: string): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
@@ -64,11 +66,11 @@ export default function Dashboard() {
     return mockUsers.find(u => u.walletAddress.toLowerCase() === address.toLowerCase()) || mockUsers[2];
   }, [address]);
 
-  // Filter campaigns created by user (Simulated for u1/Alex Rivera)
+  // Filter campaigns created by connected wallet address
   const myCreatedCampaigns = useMemo(() => {
-    if (!currentUser) return [];
-    return mockCampaigns.filter(c => c.creatorId === currentUser.id);
-  }, [currentUser]);
+    if (!address) return [];
+    return campaigns.filter(c => c.creatorId.toLowerCase() === address.toLowerCase());
+  }, [campaigns, address]);
 
   // Filter transactions by user and convert to Transaction format
   const myTransactions = useMemo(() => {
@@ -277,7 +279,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {mockCampaigns.slice(0, 3).map((campaign) => (
+                  {campaigns.slice(0, 3).map((campaign) => (
                     <div key={campaign.id} className="flex items-center justify-between group">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-lg overflow-hidden">

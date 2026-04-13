@@ -16,12 +16,13 @@ import {
   Award
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { 
-  ROUTE_PATHS, 
-  Campaign, 
-  CAMPAIGN_STATUS 
+import {
+  ROUTE_PATHS,
+  Campaign,
+  CAMPAIGN_STATUS
 } from '@/lib/index';
-import { mockCampaigns } from '@/data/index';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import { Loader2 } from 'lucide-react';
 import { StatsCard } from '@/components/Cards';
 import { FundCampaignForm, WithdrawForm } from '@/components/Forms';
 import { Badge } from '@/components/ui/badge';
@@ -34,10 +35,28 @@ import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/mo
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const { address } = useWallet();
+  const { campaigns, loading: campaignsLoading } = useCampaigns();
 
   const campaign = useMemo(() => {
-    return mockCampaigns.find(c => c.id === id || c.slug === id);
-  }, [id]);
+    return campaigns.find(c => c.id === id || c.slug === id);
+  }, [campaigns, id]);
+
+  // All hooks must be called unconditionally — before any early returns
+  const daysLeft = useMemo(() => {
+    if (!campaign) return 0;
+    const now = new Date();
+    const deadline = new Date(campaign.deadline);
+    const diff = deadline.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [campaign]);
+
+  if (campaignsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (
@@ -55,13 +74,6 @@ export default function CampaignDetail() {
   const progress = Math.min(100, (campaign.raisedAmount / campaign.goalAmount) * 100);
   const isCreator = !!(address && campaign.creator.walletAddress &&
     address.toLowerCase() === campaign.creator.walletAddress.toLowerCase());
-  
-  const daysLeft = useMemo(() => {
-    const now = new Date('2026-02-13T06:26:06Z');
-    const deadline = new Date(campaign.deadline);
-    const diff = deadline.getTime() - now.getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }, [campaign.deadline]);
 
   const handleFundingSubmit = async (amount: number): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');

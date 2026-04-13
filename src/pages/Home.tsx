@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { ROUTE_PATHS } from '@/lib/index';
 import { CampaignCard, FeatureCard, StatsCard } from '@/components/Cards';
-import { mockCampaigns } from '@/data/index';
+import { useCampaigns } from '@/hooks/useCampaigns';
 import { IMAGES } from '@/assets/images';
 import { Button } from '@/components/ui/button';
 
@@ -31,8 +31,8 @@ const staggerContainer = {
 };
 
 export default function Home() {
-  // Show top 3 active campaigns as featured
-  const featuredCampaigns = mockCampaigns.slice(0, 3);
+  const { campaigns } = useCampaigns();
+  const featuredCampaigns = campaigns.slice(0, 3);
 
   return (
     <div className="flex flex-col min-h-screen">

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SlidersHorizontal, ArrowUpDown, LayoutGrid } from 'lucide-react';
+import { Search, SlidersHorizontal, ArrowUpDown, LayoutGrid, Loader2 } from 'lucide-react';
 import { Campaign, CAMPAIGN_STATUS } from '@/lib/index';
 import { CampaignCard } from '@/components/Cards';
-import { mockCampaigns } from '@/data/index';
+import { useCampaigns } from '@/hooks/useCampaigns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,9 +28,10 @@ export default function Campaigns() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
+  const { campaigns, loading, error } = useCampaigns();
 
   const filteredCampaigns = useMemo(() => {
-    return mockCampaigns
+    return campaigns
       .filter((campaign) => {
         const matchesSearch = campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           campaign.shortDescription.toLowerCase().includes(searchQuery.toLowerCase());
@@ -40,7 +41,8 @@ export default function Campaigns() {
       .sort((a, b) => {
         switch (sortBy) {
           case 'newest':
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            // No createdAt on chain — sort by id descending (insertion order)
+            return Number(b.id) - Number(a.id);
           case 'deadline':
             return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
           case 'goal_high':
@@ -51,7 +53,7 @@ export default function Campaigns() {
             return 0;
         }
       });
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [campaigns, searchQuery, selectedCategory, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -140,12 +142,23 @@ export default function Campaigns() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <p className="text-sm text-muted-foreground">
-              Showing <span className="font-medium text-foreground">{filteredCampaigns.length}</span> active projects
+              {loading
+                ? 'Loading from blockchain...'
+                : error
+                  ? <span className="text-destructive">{error}</span>
+                  : <>Showing <span className="font-medium text-foreground">{filteredCampaigns.length}</span> active projects</>
+              }
             </p>
           </div>
 
-          <AnimatePresence mode="popLayout">
-            {filteredCampaigns.length > 0 ? (
+          {loading && (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
+
+          {!loading && <AnimatePresence mode="popLayout">
+            {filteredCampaigns.length > 0 || error ? (
               <motion.div
                 variants={staggerContainer}
                 initial="hidden"
@@ -184,7 +197,7 @@ export default function Campaigns() {
                 </Button>
               </motion.div>
             )}
-          </AnimatePresence>
+          </AnimatePresence>}
         </div>
       </section>
 

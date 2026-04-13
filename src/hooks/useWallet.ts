@@ -1,8 +1,19 @@
 import { useState, useCallback, useEffect } from 'react';
+import { BrowserProvider, formatEther } from 'ethers';
+import { CHAIN_ID } from '@/lib/contractAddresses';
 
-/**
- * WalletState interface defining the shape of our blockchain connection data
- */
+// Tell TypeScript that window.ethereum exists (injected by MetaMask)
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: string, handler: (...args: unknown[]) => void) => void;
+      removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+      isMetaMask?: boolean;
+    };
+  }
+}
+
 export interface WalletState {
   isConnected: boolean;
   address: string | null;
@@ -12,10 +23,18 @@ export interface WalletState {
   error: string | null;
 }
 
-/**
- * useWallet hook provides a simulated Web3 provider interface for the StartupFund platform.
- * In a real production environment, this would integrate with libraries like wagmi, ethers.js, or viem.
- */
+const getProvider = () => {
+  if (!window.ethereum) return null;
+  return new BrowserProvider(window.ethereum);
+};
+
+const fetchBalance = async (address: string): Promise<string> => {
+  const provider = getProvider();
+  if (!provider) return '0.00';
+  const raw = await provider.getBalance(address);
+  return parseFloat(formatEther(raw)).toFixed(4);
+};
+
 export const useWallet = () => {
   const [state, setState] = useState<WalletState>({
     isConnected: false,
@@ -26,46 +45,48 @@ export const useWallet = () => {
     error: null,
   });
 
-  /**
-   * Connects the user's wallet (Simulated)
-   */
+  // ── Connect ──────────────────────────────────────────────────
   const connect = useCallback(async () => {
     if (state.isConnecting) return;
 
-    setState((prev) => ({ ...prev, isConnecting: true, error: null }));
+    if (!window.ethereum) {
+      setState(prev => ({ ...prev, error: 'MetaMask not found. Please install it.' }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
-      // Simulate network latency for authentic dApp feel
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Prompt MetaMask popup — user approves/rejects here
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts',
+      }) as string[];
 
-      // Mock wallet data
-      const mockAddress = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
-      const mockChainId = 1; // Ethereum Mainnet
-      const mockBalance = '12.45';
+      if (!accounts || accounts.length === 0) throw new Error('No accounts returned');
+
+      const address = accounts[0];
+      const provider = getProvider()!;
+      const network = await provider.getNetwork();
+      const chainId = Number(network.chainId);
+      const balance = await fetchBalance(address);
 
       setState({
         isConnected: true,
-        address: mockAddress,
-        chainId: mockChainId,
-        balance: mockBalance,
+        address,
+        chainId,
+        balance,
         isConnecting: false,
         error: null,
       });
 
-      // Persist session locally
       localStorage.setItem('startupfund_wallet_connected', 'true');
-    } catch (err) {
-      setState((prev) => ({
-        ...prev,
-        isConnecting: false,
-        error: 'User rejected connection request',
-      }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Connection rejected';
+      setState(prev => ({ ...prev, isConnecting: false, error: msg }));
     }
   }, [state.isConnecting]);
 
-  /**
-   * Disconnects the user's wallet
-   */
+  // ── Disconnect ───────────────────────────────────────────────
   const disconnect = useCallback(() => {
     setState({
       isConnected: false,
@@ -78,56 +99,91 @@ export const useWallet = () => {
     localStorage.removeItem('startupfund_wallet_connected');
   }, []);
 
-  /**
-   * Simulated transaction signing logic for funding campaigns
-   */
+  // ── signTransaction (kept for API compatibility) ─────────────
+  // In real usage, callers use ethers contract methods directly.
+  // This method remains so existing callers don't break.
   const signTransaction = useCallback(async (details: { to: string; amount: number; data?: string }) => {
-    if (!state.isConnected) throw new Error('Wallet not connected');
-    
-    console.log('Signing transaction...', details);
-    // Simulate blockchain confirmation delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    return {
-      hash: `0x${Math.random().toString(16).slice(2, 66)}`,
-      status: 'success',
-    };
-  }, [state.isConnected]);
+    if (!state.isConnected || !state.address) throw new Error('Wallet not connected');
+    const provider = getProvider();
+    if (!provider) throw new Error('No provider');
+    const signer = await provider.getSigner();
+    const tx = await signer.sendTransaction({
+      to: details.to,
+      value: BigInt(Math.floor(details.amount * 1e18)),
+      data: details.data ?? '0x',
+    });
+    return { hash: tx.hash, status: 'success' };
+  }, [state.isConnected, state.address]);
 
-  /**
-   * Auto-connect if a previous session exists
-   */
+  // ── Auto-reconnect on page load ──────────────────────────────
   useEffect(() => {
     const wasConnected = localStorage.getItem('startupfund_wallet_connected') === 'true';
-    if (wasConnected && !state.isConnected) {
-      connect();
+    if (wasConnected && !state.isConnected && window.ethereum) {
+      // Use eth_accounts (no popup) to silently restore session
+      window.ethereum.request({ method: 'eth_accounts' }).then(async (accounts) => {
+        const list = accounts as string[];
+        if (list.length === 0) {
+          localStorage.removeItem('startupfund_wallet_connected');
+          return;
+        }
+        const address = list[0];
+        const provider = getProvider()!;
+        const network = await provider.getNetwork();
+        const balance = await fetchBalance(address);
+        setState({
+          isConnected: true,
+          address,
+          chainId: Number(network.chainId),
+          balance,
+          isConnecting: false,
+          error: null,
+        });
+      }).catch(() => {
+        localStorage.removeItem('startupfund_wallet_connected');
+      });
     }
-  }, [connect, state.isConnected]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /**
-   * Listen for simulated account changes
-   */
+  // ── MetaMask event listeners ─────────────────────────────────
   useEffect(() => {
-    // In a real app, we would use window.ethereum.on('accountsChanged', ...)
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && state.isConnected) {
-        console.log('Simulating wallet disconnection via escape key');
+    if (!window.ethereum) return;
+
+    const handleAccountsChanged = async (accounts: unknown) => {
+      const list = accounts as string[];
+      if (list.length === 0) {
         disconnect();
+      } else {
+        const address = list[0];
+        const balance = await fetchBalance(address);
+        setState(prev => ({ ...prev, address, balance }));
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [state.isConnected, disconnect]);
+    const handleChainChanged = () => {
+      // MetaMask recommends a full reload on chain change
+      window.location.reload();
+    };
+
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+
+    return () => {
+      window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+      window.ethereum?.removeListener('chainChanged', handleChainChanged);
+    };
+  }, [disconnect]);
+
+  // ── Wrong network warning ────────────────────────────────────
+  const isWrongNetwork = state.isConnected && state.chainId !== null && state.chainId !== CHAIN_ID;
 
   return {
     ...state,
     connect,
     disconnect,
     signTransaction,
-    // Helper to format short address (e.g., 0x71C7...976F)
-    shortAddress: state.address 
-      ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}` 
+    isWrongNetwork,
+    shortAddress: state.address
+      ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
       : null,
   };
 };

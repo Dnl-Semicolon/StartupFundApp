@@ -14,28 +14,30 @@ export function useUserRole() {
   const { address, isConnected } = useWallet();
   const [role, setRole]               = useState<UserRole>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [isLoading, setIsLoading]     = useState(true);
 
   // Sync state on wallet change — checks localStorage first, falls back to on-chain
   useEffect(() => {
     if (!address || !isConnected) {
       setRole(null);
       setDisplayName(null);
+      setIsLoading(false);
       return;
     }
 
     const syncWithChain = async () => {
-      const storedRole = localStorage.getItem(getRoleKey(address)) as UserRole | null;
-      const storedName = localStorage.getItem(getNameKey(address));
-
-      if (storedRole) {
-        // localStorage has data — use it
-        setRole(storedRole);
-        setDisplayName(storedName);
-        return;
-      }
-
-      // localStorage empty — query on-chain (e.g. cache cleared or new browser)
       try {
+        const storedRole = localStorage.getItem(getRoleKey(address)) as UserRole | null;
+        const storedName = localStorage.getItem(getNameKey(address));
+
+        if (storedRole) {
+          // localStorage has data — use it
+          setRole(storedRole);
+          setDisplayName(storedName);
+          return;
+        }
+
+        // localStorage empty — query on-chain (e.g. cache cleared or new browser)
         const ac = getReadContract(CONTRACT_ADDRESSES.accessControl, ACCESS_CONTROL_ABI);
         const onChainRegistered = await ac.isRegistered(address) as boolean;
         if (!onChainRegistered) return;
@@ -52,6 +54,8 @@ export function useUserRole() {
         setDisplayName(onChainName);
       } catch {
         // Chain read failed (Ganache not running etc.) — stay null
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -90,6 +94,7 @@ export function useUserRole() {
   return {
     role,
     displayName,
+    isLoading,
     isRegistered:   role !== null,
     isContributor:  role === 'contributor' || role === 'both',
     isEntrepreneur: role === 'both',

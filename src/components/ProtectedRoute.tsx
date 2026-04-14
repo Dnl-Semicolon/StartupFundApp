@@ -13,7 +13,10 @@ interface Props {
  * - Registered but not entrepreneur (when requireEntrepreneur=true) → redirects to /become-entrepreneur
  */
 export function ProtectedRoute({ children, requireEntrepreneur = false }: Props) {
-  const { isRegistered, isEntrepreneur } = useUserRole();
+  const { isRegistered, isEntrepreneur, isLoading } = useUserRole();
+
+  // Wait for localStorage/chain sync before deciding — prevents flash redirect
+  if (isLoading) return null;
 
   if (!isRegistered) {
     return <Navigate to={ROUTE_PATHS.REGISTER} replace />;

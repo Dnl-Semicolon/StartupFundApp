@@ -64,14 +64,24 @@ const stats = [
 export default function Register() {
   const navigate  = useNavigate();
   const { register } = useUserRole();
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [registeredName, setRegisteredName] = useState('');
+  const [showSuccess, setShowSuccess]             = useState(false);
+  const [registeredName, setRegisteredName]       = useState('');
+  const [isRegistering, setIsRegistering]         = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
 
-  const handleRegistration = (userData: { displayName: string; email: string; bio: string; walletAddress: string | null }) => {
-    register(userData.displayName);
-    setRegisteredName(userData.displayName);
-    setShowSuccess(true);
-    setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);
+  const handleRegistration = async (userData: { displayName: string; email: string; bio: string; walletAddress: string | null }) => {
+    setIsRegistering(true);
+    setRegistrationError(null);
+    try {
+      await register(userData.displayName, userData.email, userData.bio);
+      setRegisteredName(userData.displayName);
+      setShowSuccess(true);
+      setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);
+    } catch (err: any) {
+      setRegistrationError(err.reason ?? err.message ?? 'Registration failed. Please try again.');
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   if (showSuccess) {

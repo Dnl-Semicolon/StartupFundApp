@@ -1,16 +1,21 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { UserRegistrationForm } from '@/components/Forms';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Shield, 
-  Zap, 
-  Globe, 
-  Users, 
-  TrendingUp, 
+import { Button } from '@/components/ui/button';
+import { ROUTE_PATHS } from '@/lib/index';
+import {
+  Shield,
+  Zap,
+  Globe,
+  Users,
+  TrendingUp,
   Lock,
-  CheckCircle
+  CheckCircle,
+  Rocket,
+  ArrowRight
 } from 'lucide-react';
 import { springPresets } from '@/lib/motion';
 
@@ -168,6 +173,36 @@ export default function Register() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Entrepreneur CTA Banner */}
+      <div className="py-10 bg-primary/5 border-t border-primary/10">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springPresets.gentle, delay: 0.5 }}
+            className="flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto"
+          >
+            <div className="flex items-center gap-4 text-left">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Rocket className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-semibold text-base">Are you an entrepreneur?</p>
+                <p className="text-sm text-muted-foreground">
+                  Learn how to raise ETH funding for your startup on-chain — zero fees, instant settlement.
+                </p>
+              </div>
+            </div>
+            <Button asChild variant="outline" className="shrink-0 gap-2">
+              <Link to={ROUTE_PATHS.ENTREPRENEUR}>
+                Become an Entrepreneur
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
+          </motion.div>
         </div>
       </div>
 

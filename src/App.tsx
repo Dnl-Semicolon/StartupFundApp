@@ -12,6 +12,7 @@ import CreateCampaign from "@/pages/CreateCampaign";
 import Dashboard from "@/pages/Dashboard";
 import About from "@/pages/About";
 import Register from "@/pages/Register";
+import Entrepreneur from "@/pages/Entrepreneur";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,11 +56,15 @@ export default function App() {
                 path={ROUTE_PATHS.ABOUT} 
                 element={<About />} 
               />
-              <Route 
-                path={ROUTE_PATHS.REGISTER} 
-                element={<Register />} 
+              <Route
+                path={ROUTE_PATHS.REGISTER}
+                element={<Register />}
               />
-              <Route 
+              <Route
+                path={ROUTE_PATHS.ENTREPRENEUR}
+                element={<Entrepreneur />}
+              />
+              <Route
                 path="*" 
                 element={<Navigate to={ROUTE_PATHS.HOME} replace />} 
               />

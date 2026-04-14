@@ -430,18 +430,27 @@ export function WithdrawForm({ campaignId, onSubmit }: { campaignId: string, onS
  * All users register as Contributors by default.
  * They can upgrade to Entrepreneur later via the For Entrepreneurs page.
  */
-export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: { displayName: string; email: string; bio: string; walletAddress: string | null }) => void }) {
+export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: { displayName: string; email: string; bio: string; walletAddress: string | null }) => Promise<void> }) {
   const { isConnected, connect, address, isConnecting } = useWallet();
   const [profile, setProfile] = React.useState({
     displayName: '',
     email: '',
     bio: '',
   });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [txError, setTxError]           = React.useState<string | null>(null);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isConnected && profile.displayName) {
-      onSubmit({ ...profile, walletAddress: address });
+    if (!isConnected || !profile.displayName) return;
+    setIsSubmitting(true);
+    setTxError(null);
+    try {
+      await onSubmit({ ...profile, walletAddress: address });
+    } catch (err: any) {
+      setTxError(err.reason ?? err.message ?? 'Transaction failed. Check MetaMask and try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -515,8 +524,15 @@ export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: { displayN
               </AlertDescription>
             </Alert>
 
-            <Button type="submit" className="w-full" disabled={!profile.displayName}>
-              Create Account
+            {txError && (
+              <Alert variant="destructive">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">{txError}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" className="w-full" disabled={!profile.displayName || isSubmitting}>
+              {isSubmitting ? 'Confirm in MetaMask...' : 'Create Account'}
             </Button>
           </form>
         )}

@@ -211,6 +211,14 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "::",
       port: 8080,
+      proxy: {
+        // Proxy Ganache RPC calls through Vite to avoid CORS errors
+        '/ganache-rpc': {
+          target: 'http://127.0.0.1:7545',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/ganache-rpc/, ''),
+        },
+      },
     },
     plugins: [
       tailwindcss(),

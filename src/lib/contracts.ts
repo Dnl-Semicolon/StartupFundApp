@@ -1,9 +1,14 @@
 import { BrowserProvider, JsonRpcProvider, Contract } from 'ethers';
 import { CONTRACT_ADDRESSES } from './contractAddresses';
 
-const GANACHE_RPC = 'http://127.0.0.1:7545';
+// In dev, requests go through Vite's proxy (/ganache-rpc → http://127.0.0.1:7545)
+// to avoid CORS errors. In production, point directly at your RPC node.
+const GANACHE_RPC =
+  import.meta.env.DEV
+    ? `${window.location.origin}/ganache-rpc`
+    : 'http://127.0.0.1:7545';
 
-/** Read-only provider — hits Ganache directly, no MetaMask needed */
+/** Read-only provider — hits Ganache via Vite proxy, no MetaMask needed */
 const getReadProvider = () => new JsonRpcProvider(GANACHE_RPC);
 
 // ─── Minimal ABIs (only the functions the frontend actually calls) ───────────

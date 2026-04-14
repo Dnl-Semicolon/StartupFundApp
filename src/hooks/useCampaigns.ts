@@ -100,7 +100,11 @@ export function useCampaigns(): UseCampaignsResult {
            err.message.includes('could not detect network') ||
            err.message.includes('missing revert data') ||
            err.message.includes('network does not support') ||
-           err.message.includes('MetaMask not found'));
+           err.message.includes('MetaMask not found') ||
+           err.message.includes('BAD_DATA') ||
+           err.message.includes('could not decode result data') ||
+           err.message.includes('Failed to fetch') ||
+           err.message.includes('ECONNREFUSED'));
 
         if (isContractError) {
           setCampaigns(mockCampaigns);

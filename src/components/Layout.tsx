@@ -59,6 +59,7 @@ export function Layout({ children }: LayoutProps) {
 
   const navLinks = [
     { name: 'Discover', path: ROUTE_PATHS.CAMPAIGNS, icon: Rocket },
+    { name: 'For Entrepreneurs', path: ROUTE_PATHS.ENTREPRENEUR, icon: ShieldCheck },
     { name: 'Create', path: ROUTE_PATHS.CREATE_CAMPAIGN, icon: PlusCircle },
     { name: 'About', path: ROUTE_PATHS.ABOUT, icon: Info },
   ];
@@ -249,7 +250,7 @@ export function Layout({ children }: LayoutProps) {
               <ul className="space-y-4 text-sm text-muted-foreground">
                 <li><Link to={ROUTE_PATHS.CAMPAIGNS} className="hover:text-primary transition-colors">Browse Projects</Link></li>
                 <li><Link to={ROUTE_PATHS.CREATE_CAMPAIGN} className="hover:text-primary transition-colors">Start a Campaign</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">How it Works</Link></li>
+                <li><Link to={ROUTE_PATHS.ENTREPRENEUR} className="hover:text-primary transition-colors">Become an Entrepreneur</Link></li>
                 <li><Link to="#" className="hover:text-primary transition-colors">Success Stories</Link></li>
               </ul>
             </div>

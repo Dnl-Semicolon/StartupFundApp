@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ROUTE_PATHS } from "@/lib/index";
 import { Layout } from "@/components/Layout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Home from "@/pages/Home";
 import Campaigns from "@/pages/Campaigns";
 import CampaignDetail from "@/pages/CampaignDetail";
@@ -44,9 +45,13 @@ export default function App() {
                 path={ROUTE_PATHS.CAMPAIGN_DETAIL} 
                 element={<CampaignDetail />} 
               />
-              <Route 
-                path={ROUTE_PATHS.CREATE_CAMPAIGN} 
-                element={<CreateCampaign />} 
+              <Route
+                path={ROUTE_PATHS.CREATE_CAMPAIGN}
+                element={
+                  <ProtectedRoute requireEntrepreneur>
+                    <CreateCampaign />
+                  </ProtectedRoute>
+                }
               />
               <Route 
                 path={ROUTE_PATHS.DASHBOARD} 

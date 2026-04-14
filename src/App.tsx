@@ -70,3 +70,5 @@ export default function App() {
     </QueryClientProvider>
   );
 }
+
+// Version: 1.0.0

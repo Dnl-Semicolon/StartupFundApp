@@ -1,11 +1,10 @@
 export const CONTRACT_ADDRESSES = {
-  startupFund:     "0x5188ab1d7947b3fb8b379681804f58236273de92",
-  campaignManager: "0x7e04bce952455095f8047b0e2bde9d743bd6b07a",
-  fundingVault:    "0x47d323a1b5a5eb09671ca34fc07a1b0a5c36b450",
-  rewardToken:     "0xf6abfbe0c6d4f672d5ae922a20608236b5269096",
-  accessControl:   "0x0e49ee16b24e91c4feb4e5a729e881cbc618164f",
+  startupFund:     "0x5f7386a344ce78f0d9fd45d85eda5f37f7cb9bb6",
+  campaignManager: "0x8f89ba98c2a70d62a40ae5b5d35b87b9249ea760",
+  fundingVault:    "0xac1aa5da7e6b6752254b31ef8f6b4b564ac31697",
+  rewardToken:     "0x8990cc8e42d6d266dff77b173ba063eca2d2b913",
+  accessControl:   "0x45e6e6e1bdbf52ce9ef7c648afb9f03fcfcba45c",
 };
 
 // Chain ID for Ganache
 export const CHAIN_ID = 1337;
-

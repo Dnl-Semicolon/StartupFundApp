@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ROUTE_PATHS } from '@/lib/index';
 import { useWallet } from '@/hooks/useWallet';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -146,16 +147,28 @@ const faqs = [
 
 export default function Entrepreneur() {
   const { isConnected, connect, isConnecting } = useWallet();
+  const { isRegistered, isEntrepreneur, upgradeToEntrepreneur } = useUserRole();
   const navigate = useNavigate();
   const [openFaq, setOpenFaq] = useState<string>('');
 
   const handleGetStarted = () => {
-    if (isConnected) {
+    if (!isConnected) {
+      navigate(ROUTE_PATHS.REGISTER);
+    } else if (!isRegistered) {
+      navigate(ROUTE_PATHS.REGISTER);
+    } else if (!isEntrepreneur) {
+      upgradeToEntrepreneur();
       navigate(ROUTE_PATHS.CREATE_CAMPAIGN);
     } else {
-      navigate(ROUTE_PATHS.REGISTER);
+      navigate(ROUTE_PATHS.CREATE_CAMPAIGN);
     }
   };
+
+  const ctaLabel = !isConnected || !isRegistered
+    ? 'Get Started Free'
+    : !isEntrepreneur
+      ? 'Become an Entrepreneur'
+      : 'Launch Your Campaign';
 
   return (
     <div className="min-h-screen bg-background">
@@ -205,7 +218,7 @@ export default function Entrepreneur() {
                 className="h-14 px-10 text-lg gap-2 shadow-xl shadow-primary/20"
               >
                 <Rocket className="w-5 h-5" />
-                {isConnected ? 'Launch Your Campaign' : 'Get Started Free'}
+                {ctaLabel}
                 <ArrowRight className="w-4 h-4" />
               </Button>
               <Button size="lg" variant="outline" asChild className="h-14 px-10 text-lg">
@@ -464,7 +477,7 @@ export default function Entrepreneur() {
                 onClick={handleGetStarted}
                 className="h-14 px-12 text-lg gap-2 shadow-xl shadow-primary/25"
               >
-                {isConnected ? 'Create Campaign' : 'Register & Launch'}
+                {ctaLabel}
                 <ArrowRight className="w-4 h-4" />
               </Button>
               <Button size="lg" variant="ghost" asChild className="h-14 px-8 text-lg">

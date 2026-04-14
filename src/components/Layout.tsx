@@ -16,6 +16,7 @@ import { SiX, SiLinkedin, SiGithub } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROUTE_PATHS } from '@/lib';
 import { useWallet } from '@/hooks/useWallet';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -39,7 +40,8 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { isConnected, address, shortAddress, balance, isConnecting, connect, disconnect } = useWallet();
+  const { isConnected, address, shortAddress, balance, isConnecting, connect, disconnect, isWrongNetwork } = useWallet();
+  const { isEntrepreneur } = useUserRole();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -57,12 +59,14 @@ export function Layout({ children }: LayoutProps) {
     setIsMobileMenuOpen(false);
   }, [location]);
 
+  // "For Entrepreneurs" shows to everyone who is NOT yet an entrepreneur (it's the upgrade path)
+  // "Create" shows only to entrepreneurs
   const navLinks = [
-    { name: 'Discover', path: ROUTE_PATHS.CAMPAIGNS, icon: Rocket },
-    { name: 'For Entrepreneurs', path: ROUTE_PATHS.ENTREPRENEUR, icon: ShieldCheck },
-    { name: 'Create', path: ROUTE_PATHS.CREATE_CAMPAIGN, icon: PlusCircle },
-    { name: 'About', path: ROUTE_PATHS.ABOUT, icon: Info },
-  ];
+    { name: 'Discover',          path: ROUTE_PATHS.CAMPAIGNS,        icon: Rocket,      show: true },
+    { name: 'For Entrepreneurs', path: ROUTE_PATHS.ENTREPRENEUR,     icon: ShieldCheck, show: !isEntrepreneur },
+    { name: 'Create',            path: ROUTE_PATHS.CREATE_CAMPAIGN,  icon: PlusCircle,  show: isEntrepreneur },
+    { name: 'About',             path: ROUTE_PATHS.ABOUT,            icon: Info,        show: true },
+  ].filter(l => l.show);
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -206,6 +210,22 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       <main className="flex-1 pt-16">
+        {/* Wrong-network warning — shown whenever MetaMask is not on Ganache (Chain ID 1337) */}
+        <AnimatePresence>
+          {isWrongNetwork && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full bg-destructive/95 text-destructive-foreground text-center text-sm py-2.5 px-4 font-medium backdrop-blur-sm"
+            >
+              Wrong network detected — please switch MetaMask to{' '}
+              <span className="font-bold">Ganache (Chain ID: 1337)</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

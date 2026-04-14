@@ -24,12 +24,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -427,14 +427,15 @@ export function WithdrawForm({ campaignId, onSubmit }: { campaignId: string, onS
 
 /**
  * User Registration Form with Wallet Connection
+ * All users register as Contributors by default.
+ * They can upgrade to Entrepreneur later via the For Entrepreneurs page.
  */
-export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: any) => void }) {
+export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: { displayName: string; email: string; bio: string; walletAddress: string | null }) => void }) {
   const { isConnected, connect, address, isConnecting } = useWallet();
   const [profile, setProfile] = React.useState({
     displayName: '',
     email: '',
     bio: '',
-    userType: 'investor' as 'investor' | 'entrepreneur'
   });
 
   const handleRegister = (e: React.FormEvent) => {
@@ -449,7 +450,7 @@ export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: any) => vo
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Join StartupFund</CardTitle>
         <CardDescription>
-          Connect your wallet and create your investor/entrepreneur profile
+          Connect your wallet to start contributing to campaigns
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -459,7 +460,7 @@ export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: any) => vo
             <div>
               <h3 className="font-semibold mb-2">Connect Your Web3 Wallet</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                We support MetaMask, WalletConnect, and other Web3 wallets
+                MetaMask required. Make sure you are connected to Ganache (Chain ID 1337).
               </p>
               <Button onClick={connect} disabled={isConnecting} className="w-full">
                 {isConnecting ? "Connecting..." : "Connect Wallet"}
@@ -470,63 +471,52 @@ export function UserRegistrationForm({ onSubmit }: { onSubmit: (data: any) => vo
           <form onSubmit={handleRegister} className="space-y-4">
             <Alert className="bg-primary/10 border-primary/20">
               <Info className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                Wallet Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+              <AlertDescription className="text-xs font-mono">
+                {address?.slice(0, 6)}...{address?.slice(-4)} connected
               </AlertDescription>
             </Alert>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Display Name</label>
-                <Input 
+                <label className="text-sm font-medium">Display Name <span className="text-destructive">*</span></label>
+                <Input
                   placeholder="Your name or company"
                   value={profile.displayName}
-                  onChange={(e) => setProfile({...profile, displayName: e.target.value})}
+                  onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
                   required
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium">Email (Optional)</label>
-                <Input 
+                <label className="text-sm font-medium">Email <span className="text-muted-foreground text-xs">(Optional)</span></label>
+                <Input
                   type="email"
                   placeholder="your@email.com"
                   value={profile.email}
-                  onChange={(e) => setProfile({...profile, email: e.target.value})}
+                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium">I am a...</label>
-                <Select 
-                  value={profile.userType} 
-                  onValueChange={(value: 'investor' | 'entrepreneur') => 
-                    setProfile({...profile, userType: value})
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="investor">Investor/Contributor</SelectItem>
-                    <SelectItem value="entrepreneur">Entrepreneur/Founder</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Bio (Optional)</label>
-                <Textarea 
+                <label className="text-sm font-medium">Bio <span className="text-muted-foreground text-xs">(Optional)</span></label>
+                <Textarea
                   placeholder="Tell us about yourself..."
                   value={profile.bio}
-                  onChange={(e) => setProfile({...profile, bio: e.target.value})}
+                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                   className="h-20 resize-none"
                 />
               </div>
             </div>
 
+            <Alert className="bg-muted/50 border-border">
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs text-muted-foreground">
+                You will be registered as a <span className="font-semibold text-foreground">Contributor</span> by default. You can upgrade to Entrepreneur at any time from the For Entrepreneurs page.
+              </AlertDescription>
+            </Alert>
+
             <Button type="submit" className="w-full" disabled={!profile.displayName}>
-              Complete Registration
+              Create Account
             </Button>
           </form>
         )}

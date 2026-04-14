@@ -1,18 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Rocket, 
-  ShieldCheck, 
-  TrendingUp, 
-  Globe, 
-  ArrowRight, 
-  Layers, 
-  Zap
+import {
+  Rocket,
+  ShieldCheck,
+  TrendingUp,
+  Globe,
+  ArrowRight,
+  Layers,
+  Zap,
+  AlertTriangle,
 } from 'lucide-react';
 import { ROUTE_PATHS } from '@/lib/index';
 import { CampaignCard, FeatureCard, StatsCard } from '@/components/Cards';
 import { useCampaigns } from '@/hooks/useCampaigns';
+import { useUserRole } from '@/hooks/useUserRole';
 import { IMAGES } from '@/assets/images';
 import { Button } from '@/components/ui/button';
 
@@ -31,7 +33,8 @@ const staggerContainer = {
 };
 
 export default function Home() {
-  const { campaigns } = useCampaigns();
+  const { campaigns, isMockData } = useCampaigns();
+  const { isEntrepreneur } = useUserRole();
   const featuredCampaigns = campaigns.slice(0, 3);
 
   return (
@@ -69,14 +72,14 @@ export default function Home() {
                 Where <span className="text-primary">Sharks</span> Meet the <span className="text-chart-2">Future</span>
               </motion.h1>
               
-              <motion.p 
+              <motion.p
                 variants={fadeInUp}
                 className="text-xl text-muted-foreground max-w-lg leading-relaxed"
               >
-                StartupFund is the premier decentralized platform for entrepreneurs to pitch visionary ideas and for investors to secure early-stage equity via smart contracts.
+                StartupFund is the premier decentralised platform for entrepreneurs to pitch visionary ideas and for contributors to back the next generation of startups via smart contracts.
               </motion.p>
 
-              <motion.div 
+              <motion.div
                 variants={fadeInUp}
                 className="flex flex-col sm:flex-row gap-4"
               >
@@ -85,11 +88,16 @@ export default function Home() {
                     Explore Campaigns <ArrowRight className="ml-2 w-5 h-5" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold" asChild>
-                  <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>
-                    Pitch Your Idea
-                  </Link>
-                </Button>
+                {/* Only show "Pitch Your Idea" to entrepreneurs or unregistered users (discovery) */}
+                {isEntrepreneur ? (
+                  <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold" asChild>
+                    <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>Launch a Campaign</Link>
+                  </Button>
+                ) : (
+                  <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold" asChild>
+                    <Link to={ROUTE_PATHS.ENTREPRENEUR}>For Entrepreneurs</Link>
+                  </Button>
+                )}
               </motion.div>
 
               <motion.div variants={fadeInUp} className="flex items-center gap-8 pt-4">
@@ -104,7 +112,7 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground font-medium">
-                  Trusted by <span className="text-foreground font-bold">2,500+</span> global investors
+                  Trusted by <span className="text-foreground font-bold">2,500+</span> contributors worldwide
                 </p>
               </motion.div>
             </motion.div>
@@ -149,10 +157,10 @@ export default function Home() {
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <StatsCard title="Total Value Funded" value="$42,500,000" change="+12% this month" />
-            <StatsCard title="Active Startups" value="148" change="+24 this week" />
-            <StatsCard title="Total Backers" value="12,402" change="+1,200 new users" />
-            <StatsCard title="Success Rate" value="92%" change="Industry Leading" />
+            <StatsCard title="Active Campaigns" value={campaigns.filter(c => c.status === 'active').length.toString() || '--'} />
+            <StatsCard title="Total Funded" value={`${campaigns.reduce((s, c) => s + c.raisedAmount, 0).toFixed(1)} ETH`} />
+            <StatsCard title="Total Contributors" value="--" />
+            <StatsCard title="Success Rate" value="--" />
           </div>
         </div>
       </section>
@@ -162,9 +170,19 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
             <div className="space-y-4">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Featured Opportunities</h2>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Featured Opportunities
+                {isMockData && (
+                  <span className="ml-3 inline-flex items-center gap-1 text-sm font-normal text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Demo Data
+                  </span>
+                )}
+              </h2>
               <p className="text-muted-foreground text-lg max-w-2xl">
-                Hand-picked startups that are redefining industries with blockchain technology.
+                {isMockData
+                  ? 'Contracts not yet deployed — showing sample campaigns. Deploy to Ganache to see live data.'
+                  : 'Hand-picked startups that are redefining industries with blockchain technology.'}
               </p>
             </div>
             <Button variant="ghost" className="group" asChild>
@@ -199,30 +217,30 @@ export default function Home() {
               title="Trustless Security"
               description="All funds are held in audited smart contracts. Funds are only released when milestones are verified by the community."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Rocket className="w-8 h-8 text-primary" />}
-              title="Instant Liquidity"
-              description="Contributors receive reward tokens that represent their stake, which can be traded or held for long-term project growth."
+              title="Reward Tokens"
+              description="Contributors receive ERC-20 reward tokens proportional to their ETH contribution when a campaign is successfully funded."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Globe className="w-8 h-8 text-primary" />}
-              title="Global Reach"
-              description="Connect with visionary founders and institutional-grade capital from every corner of the world without borders."
+              title="Global Access"
+              description="Connect with visionary founders from every corner of the world. No banks, no gatekeepers — just a wallet and an idea."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<TrendingUp className="w-8 h-8 text-primary" />}
-              title="Real-time Analytics"
-              description="Monitor your investment portfolio and project progress with institutional-grade data dashboards and live updates."
+              title="Real-time Tracking"
+              description="Monitor campaign progress, contribution history, and funding milestones in real time directly from the blockchain."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Layers className="w-8 h-8 text-primary" />}
-              title="Multi-Chain Support"
-              description="Contribute using your preferred assets across Ethereum, Polygon, and major Layer 2 networks for maximum flexibility."
+              title="On-Chain Transparency"
+              description="Every contribution, withdrawal, and refund is permanently recorded on the blockchain and publicly verifiable."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Zap className="w-8 h-8 text-primary" />}
               title="Low Entry Barrier"
-              description="Democratizing venture capital by allowing anyone to participate in high-potential startups with as little as 0.1 ETH."
+              description="Anyone can participate in high-potential startups with a minimum contribution of 0.001 ETH — no accreditation needed."
             />
           </div>
         </div>
@@ -246,11 +264,11 @@ export default function Home() {
                 Ready to Fund the Future?
               </h2>
               <p className="text-xl text-primary-foreground/80 leading-relaxed">
-                Join thousands of investors already backing the next generation of unicorn startups. Secure your spot in the decentralized economy today.
+                Join thousands of contributors already backing the next generation of startups. Participate in the decentralised economy today.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
                 <Button size="lg" variant="secondary" className="h-14 px-10 text-lg font-bold shadow-xl hover:shadow-2xl transition-all" asChild>
-                  <Link to={ROUTE_PATHS.CAMPAIGNS}>Start Investing</Link>
+                  <Link to={ROUTE_PATHS.CAMPAIGNS}>Explore Campaigns</Link>
                 </Button>
                 <Button size="lg" variant="outline" className="h-14 px-10 text-lg font-bold border-white/30 text-white hover:bg-white/10" asChild>
                   <Link to={ROUTE_PATHS.ABOUT}>Learn More</Link>

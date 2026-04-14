@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SlidersHorizontal, ArrowUpDown, LayoutGrid, Loader2 } from 'lucide-react';
-import { Campaign, CAMPAIGN_STATUS } from '@/lib/index';
+import { Search, SlidersHorizontal, ArrowUpDown, LayoutGrid, Loader2, AlertTriangle } from 'lucide-react';
+import { Campaign, CAMPAIGN_STATUS, ROUTE_PATHS } from '@/lib/index';
 import { CampaignCard } from '@/components/Cards';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,7 @@ export default function Campaigns() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
-  const { campaigns, loading, error } = useCampaigns();
+  const { campaigns, loading, error, isMockData } = useCampaigns();
 
   const filteredCampaigns = useMemo(() => {
     return campaigns
@@ -137,6 +138,30 @@ export default function Campaigns() {
         </div>
       </section>
 
+      {/* Mock data banner — shown when contracts are not deployed / Ganache is not running */}
+      <AnimatePresence>
+        {isMockData && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="bg-amber-500/10 border-y border-amber-500/30 py-3 px-4"
+          >
+            <div className="container mx-auto flex items-center gap-3 text-sm text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                <span className="font-semibold">Demo mode</span> — Smart contracts not detected on Ganache.
+                Deploy your contracts in Remix IDE and update{' '}
+                <code className="font-mono text-xs bg-amber-500/20 px-1.5 py-0.5 rounded">
+                  src/lib/contractAddresses.ts
+                </code>{' '}
+                to see live data.
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Campaign Grid */}
       <section className="py-12">
         <div className="container mx-auto px-4">
@@ -146,7 +171,7 @@ export default function Campaigns() {
                 ? 'Loading from blockchain...'
                 : error
                   ? <span className="text-destructive">{error}</span>
-                  : <>Showing <span className="font-medium text-foreground">{filteredCampaigns.length}</span> active projects</>
+                  : <>{isMockData ? 'Showing' : 'Showing'} <span className="font-medium text-foreground">{filteredCampaigns.length}</span> {isMockData ? 'demo campaigns' : 'live campaigns'}</>
               }
             </p>
           </div>
@@ -212,14 +237,14 @@ export default function Campaigns() {
           >
             <h2 className="text-3xl font-bold mb-4">Have a groundbreaking idea?</h2>
             <p className="text-muted-foreground mb-8 text-lg">
-              Join the elite circle of entrepreneurs raising capital on the most transparent crowdfunding platform.
+              Join a growing community of entrepreneurs raising ETH on the most transparent crowdfunding platform.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Button size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20">
-                Launch Your Campaign
+              <Button size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20" asChild>
+                <Link to={ROUTE_PATHS.ENTREPRENEUR}>Launch Your Campaign</Link>
               </Button>
-              <Button size="lg" variant="outline" className="rounded-full px-8">
-                How it Works
+              <Button size="lg" variant="outline" className="rounded-full px-8" asChild>
+                <Link to={ROUTE_PATHS.ABOUT}>How it Works</Link>
               </Button>
             </div>
           </motion.div>

@@ -1,5 +1,10 @@
-import { BrowserProvider, Contract } from 'ethers';
+import { BrowserProvider, JsonRpcProvider, Contract } from 'ethers';
 import { CONTRACT_ADDRESSES } from './contractAddresses';
+
+const GANACHE_RPC = 'http://127.0.0.1:7545';
+
+/** Read-only provider — hits Ganache directly, no MetaMask needed */
+const getReadProvider = () => new JsonRpcProvider(GANACHE_RPC);
 
 // ─── Minimal ABIs (only the functions the frontend actually calls) ───────────
 
@@ -38,20 +43,19 @@ export const REWARD_TOKEN_ABI = [
 
 // ─── Contract instance helpers ───────────────────────────────────────────────
 
-const getProvider = () => {
+const getMetaMaskProvider = () => {
   if (!window.ethereum) throw new Error('MetaMask not found');
   return new BrowserProvider(window.ethereum);
 };
 
-/** Read-only contract (no signer needed) */
-export const getReadContract = async (address: string, abi: string[]) => {
-  const provider = getProvider();
-  return new Contract(address, abi, provider);
+/** Read-only contract — uses JsonRpcProvider, no MetaMask connection required */
+export const getReadContract = (address: string, abi: string[]) => {
+  return new Contract(address, abi, getReadProvider());
 };
 
 /** Write contract — prompts MetaMask to sign */
 export const getWriteContract = async (address: string, abi: string[]) => {
-  const provider = getProvider();
+  const provider = getMetaMaskProvider();
   const signer = await provider.getSigner();
   return new Contract(address, abi, signer);
 };
@@ -74,14 +78,15 @@ export const getCampaignManager = () =>
 export const getRewardToken = () =>
   getReadContract(CONTRACT_ADDRESSES.rewardToken, REWARD_TOKEN_ABI);
 
+
 // ─── Shared helper: ensure user is registered, register if not ──────────────
 
 export const ensureRegistered = async (address: string): Promise<void> => {
-  const ac = await getAccessControl(false);
+  const ac = getAccessControl(false);
   const registered = await ac.isRegistered(address) as boolean;
   if (!registered) {
     const acWrite = await getAccessControl(true);
     const tx = await acWrite.register();
-    await tx.wait(); // wait for Ganache to mine the block
+    await tx.wait();
   }
 };

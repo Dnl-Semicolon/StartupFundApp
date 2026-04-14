@@ -1,0 +1,478 @@
+{
+	"compiler": {
+		"version": "0.8.30+commit.73712a01"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_campaignManager",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_fundingVault",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_rewardToken",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_accessControl",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					}
+				],
+				"name": "CampaignCreated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "contributor",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "Funded",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "contributor",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "Refunded",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "contributor",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "RewardMinted",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "Withdrawn",
+				"type": "event"
+			},
+			{
+				"inputs": [],
+				"name": "accessControl",
+				"outputs": [
+					{
+						"internalType": "contract IVerification",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "campaignManager",
+				"outputs": [
+					{
+						"internalType": "contract ICampaign",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					}
+				],
+				"name": "claimRefund",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "title",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "slug",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "description",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "shortDescription",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "imageUrl",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "category",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "goalAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minContribution",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "tokenSymbol",
+						"type": "string"
+					}
+				],
+				"name": "createCampaign",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					}
+				],
+				"name": "fundCampaign",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "fundingVault",
+				"outputs": [
+					{
+						"internalType": "contract IFundingVault",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "wallet",
+						"type": "address"
+					}
+				],
+				"name": "isRegistered",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "owner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "rewardToken",
+				"outputs": [
+					{
+						"internalType": "contract IRewardToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "wallet",
+						"type": "address"
+					}
+				],
+				"name": "tokenBalanceOf",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "totalCampaigns",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					}
+				],
+				"name": "withdraw",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"stateMutability": "payable",
+				"type": "receive"
+			}
+		],
+		"devdoc": {
+			"details": "Orchestrates all user-facing actions.      - Does NOT hold ETH (all ETH goes to FundingVault).      - Delegates campaign data to CampaignManager.      - Delegates access control to AccessControl.      - Mints reward tokens via RewardToken. Function signatures must EXACTLY match STARTUPFUND_ABI in src/lib/contracts.ts.",
+			"kind": "dev",
+			"methods": {
+				"claimRefund(uint256)": {
+					"details": "Contributor claims a refund after campaign is CANCELLED.      - Contributor must have a non-zero contribution."
+				},
+				"constructor": {
+					"params": {
+						"_accessControl": "Address of deployed AccessControl",
+						"_campaignManager": "Address of deployed CampaignManager",
+						"_fundingVault": "Address of deployed FundingVault",
+						"_rewardToken": "Address of deployed RewardToken"
+					}
+				},
+				"createCampaign(string,string,string,string,string,string,uint256,uint256,uint256,string)": {
+					"details": "Creates a new campaign. Only registered, unblocked users.      Signature matches STARTUPFUND_ABI exactly."
+				},
+				"fundCampaign(uint256)": {
+					"details": "Contributes ETH to a campaign.      - Campaign must be ACTIVE and before deadline.      - msg.value must be >= minContribution.      - On success, status is re-evaluated (may flip to FUNDED).      - If newly FUNDED, reward tokens are minted immediately."
+				},
+				"isRegistered(address)": {
+					"details": "Proxies to AccessControl.isRegistered()."
+				},
+				"tokenBalanceOf(address)": {
+					"details": "Returns the RewardToken balance for a wallet."
+				},
+				"totalCampaigns()": {
+					"details": "Proxies to CampaignManager.campaignCount().      Named totalCampaigns() to match frontend ABI."
+				},
+				"withdraw(uint256)": {
+					"details": "Creator withdraws funds after campaign is FUNDED.      - Only callable once (fundsReleased flag in FundingVault).      - Reward tokens are minted first if not yet done."
+				}
+			},
+			"title": "StartupFund",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/StartupFund.sol": "StartupFund"
+		},
+		"evmVersion": "prague",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/ICampaign.sol": {
+			"keccak256": "0x7c13c208a056627a0ad6b2150c4272fe206a37304820b8a55b3d5199bff9ce31",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://e6c948e4a04120c46edbb6c8abb290cb5963342da4038f60a1e3b489c51bcf93",
+				"dweb:/ipfs/QmNLsRR23A14r7iYcjm3DVWhm7VQobnv2Wr3ZLod1KAEzX"
+			]
+		},
+		"contracts/IFundingVault.sol": {
+			"keccak256": "0x59f0b17eb41696cbe2fb3fd203c440efd6cc59c40f014df0b458a3a3c4d6e719",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3d84f88bc0e59e607c14e89e644b7143edb6496c9f601fdb2d2fc1620dda0774",
+				"dweb:/ipfs/QmXc5WJXreJUd6y3DD61DhpU94rmBKUv65oeK4MgNjjnr6"
+			]
+		},
+		"contracts/IRewardToken.sol": {
+			"keccak256": "0x5048fd777c7f490162d4637db207b6e31fe6ef344d73a9752d7ee9e9385abe30",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://07914c2959ccd15b456e41c2ef8e3898edc82a3818b5f8e97fb2d148df601868",
+				"dweb:/ipfs/QmXwfs9SXSueL52QjhfgNZKER8EAwN52f6Q3gDFHch7Tzs"
+			]
+		},
+		"contracts/IVerification.sol": {
+			"keccak256": "0x1ecf4a69d81fdb76149ff8bd678359c49f6570fe8c74fcf49c093ab7480b15a7",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://126e5d53d6bb733472115b823907a7602aafd0993ba1779544aac9a823607c9d",
+				"dweb:/ipfs/QmNiTdEjHTQT1y386L6TjNgsDKZNkp8gz1gqzhPNW9hb3p"
+			]
+		},
+		"contracts/StartupFund.sol": {
+			"keccak256": "0x826587fbb889188cdf736f369ea73f3401845f3aab14746e56e71df16793a68d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://62b2163e95e873646e58236628fe7890f087920348f6f2274fef3b4dabb731d9",
+				"dweb:/ipfs/QmezNS5T2K96SzERKeoCpdYWwjUQQ5HMYvm87nuATaGEBN"
+			]
+		}
+	},
+	"version": 1
+}

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { parseEther } from 'ethers';
 import { getStartupFund, ensureRegistered } from '@/lib/contracts';
 import { useWallet } from '@/hooks/useWallet';
+import { useUserRole } from '@/hooks/useUserRole';
 import { 
   Clock, 
   Users, 
@@ -24,7 +25,7 @@ import {
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { Loader2 } from 'lucide-react';
 import { StatsCard } from '@/components/Cards';
-import { FundCampaignForm, WithdrawForm } from '@/components/Forms';
+import { FundCampaignForm, WithdrawForm, RefundRequestForm } from '@/components/Forms';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -35,6 +36,7 @@ import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/mo
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const { address } = useWallet();
+  const { isRegistered, isContributor, isEntrepreneur } = useUserRole();
   const { campaigns, loading: campaignsLoading } = useCampaigns();
 
   const campaign = useMemo(() => {
@@ -75,6 +77,13 @@ export default function CampaignDetail() {
   const isCreator = !!(address && campaign.creator.walletAddress &&
     address.toLowerCase() === campaign.creator.walletAddress.toLowerCase());
 
+  // Sidebar form visibility rules
+  const showFundForm     = isContributor && !isCreator && campaign.status === CAMPAIGN_STATUS.ACTIVE && daysLeft > 0;
+  const showWithdrawForm = isEntrepreneur && isCreator  && campaign.status === CAMPAIGN_STATUS.FUNDED;
+  const showRefundForm   = isContributor && !isCreator  && campaign.status === CAMPAIGN_STATUS.CANCELLED;
+  const showRegisterPrompt = !isRegistered && campaign.status === CAMPAIGN_STATUS.ACTIVE;
+  const showCreatorActive  = isCreator && campaign.status === CAMPAIGN_STATUS.ACTIVE;
+
   const handleFundingSubmit = async (amount: number): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
     await ensureRegistered(address);
@@ -89,6 +98,13 @@ export default function CampaignDetail() {
     if (!address) throw new Error('Wallet not connected');
     const contract = await getStartupFund(true);
     const tx = await contract.withdraw(BigInt(campaign.id));
+    await tx.wait();
+  };
+
+  const handleRefundSubmit = async (): Promise<void> => {
+    if (!address) throw new Error('Wallet not connected');
+    const contract = await getStartupFund(true);
+    const tx = await contract.claimRefund(BigInt(campaign.id));
     await tx.wait();
   };
 
@@ -242,9 +258,17 @@ export default function CampaignDetail() {
         <aside className="space-y-6">
           <Card className="sticky top-24 border-2 border-primary/10 shadow-xl">
             <CardHeader>
-              <CardTitle>Back this project</CardTitle>
+              <CardTitle>
+                {showFundForm     && 'Back this project'}
+                {showWithdrawForm && 'Withdraw Funds'}
+                {showRefundForm   && 'Claim Your Refund'}
+                {showCreatorActive && 'Your Campaign'}
+                {!showFundForm && !showWithdrawForm && !showRefundForm && !showCreatorActive && 'Campaign Status'}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+
+              {/* Progress bar — always visible */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Progress</span>
@@ -253,11 +277,78 @@ export default function CampaignDetail() {
                 <Progress value={progress} className="h-2" />
               </div>
 
-              <FundCampaignForm 
-                campaignId={campaign.id} 
-                onSubmit={handleFundingSubmit} 
-              />
+              {/* ACTIVE + contributor + not creator → Fund form */}
+              {showFundForm && (
+                <FundCampaignForm
+                  campaignId={campaign.id}
+                  onSubmit={handleFundingSubmit}
+                />
+              )}
 
+              {/* FUNDED + entrepreneur + creator → Withdraw form */}
+              {showWithdrawForm && (
+                <WithdrawForm
+                  campaignId={campaign.id}
+                  onSubmit={handleWithdrawSubmit}
+                />
+              )}
+
+              {/* CANCELLED + contributor + not creator → Refund form */}
+              {showRefundForm && (
+                <RefundRequestForm
+                  campaignId={campaign.id}
+                  contributionAmount={0}
+                  onSubmit={handleRefundSubmit}
+                />
+              )}
+
+              {/* ACTIVE + creator → Creator info banner */}
+              {showCreatorActive && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-center space-y-1">
+                  <p className="font-semibold text-primary">You created this campaign</p>
+                  <p className="text-muted-foreground text-xs">
+                    Funding is live. Once the goal is reached by the deadline, you can withdraw from your Dashboard.
+                  </p>
+                </div>
+              )}
+
+              {/* Not registered, campaign is active → prompt to register */}
+              {showRegisterPrompt && (
+                <div className="rounded-lg bg-muted/50 border border-border p-4 text-sm text-center space-y-3">
+                  <p className="font-medium">Want to back this project?</p>
+                  <p className="text-muted-foreground text-xs">
+                    Register an account to contribute ETH and earn reward tokens.
+                  </p>
+                  <Link
+                    to={ROUTE_PATHS.REGISTER}
+                    className="inline-block w-full text-center bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    Register to Fund
+                  </Link>
+                </div>
+              )}
+
+              {/* Campaign is FUNDED and user is not creator → funded banner */}
+              {campaign.status === CAMPAIGN_STATUS.FUNDED && !isCreator && (
+                <div className="rounded-lg bg-chart-2/10 border border-chart-2/30 p-4 text-sm text-center">
+                  <p className="font-semibold text-chart-2">Campaign Successfully Funded</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    This campaign reached its goal. Reward tokens will be minted when the creator withdraws.
+                  </p>
+                </div>
+              )}
+
+              {/* Campaign is CANCELLED and user is not contributor (e.g. entrepreneur without contribution) */}
+              {campaign.status === CAMPAIGN_STATUS.CANCELLED && !isContributor && !isCreator && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-center">
+                  <p className="font-semibold text-destructive">Campaign Cancelled</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    This campaign did not reach its funding goal by the deadline.
+                  </p>
+                </div>
+              )}
+
+              {/* Creator info — always shown */}
               <div className="pt-4 border-t border-border">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10 ring-2 ring-background">
@@ -272,27 +363,21 @@ export default function CampaignDetail() {
                     <ExternalLink className="w-4 h-4" />
                   </Link>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
-                  {campaign.creator.bio}
-                </p>
+                {campaign.creator.bio && (
+                  <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
+                    {campaign.creator.bio}
+                  </p>
+                )}
               </div>
 
-              {isCreator && campaign.status === CAMPAIGN_STATUS.FUNDED && (
-                <div className="pt-4 border-t border-border">
-                  <WithdrawForm 
-                    campaignId={campaign.id} 
-                    onSubmit={handleWithdrawSubmit} 
-                  />
-                </div>
-              )}
-
+              {/* Smart contract trust badge */}
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                   <TrendingUp className="w-3 h-3" />
-                  Market Insight
+                  Smart Contract Enforced
                 </div>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Institutional interest in {campaign.category} projects has increased by 14% this quarter. This project aligns with current Web3 infrastructure trends.
+                  All funding, withdrawals, and refunds are executed automatically by audited smart contracts on Ganache. No manual intervention possible.
                 </p>
               </div>
             </CardContent>

@@ -1,0 +1,159 @@
+{
+	"compiler": {
+		"version": "0.8.30+commit.73712a01"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "contributor",
+						"type": "address"
+					}
+				],
+				"name": "deposit",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					}
+				],
+				"name": "fundsReleased",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "contributor",
+						"type": "address"
+					}
+				],
+				"name": "getContribution",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "contributor",
+						"type": "address"
+					}
+				],
+				"name": "issueRefund",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "campaignId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "creatorAddress",
+						"type": "address"
+					}
+				],
+				"name": "releaseFunds",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/StartupFund.sol": "IFundingVault"
+		},
+		"evmVersion": "prague",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/ICampaign.sol": {
+			"keccak256": "0x7c13c208a056627a0ad6b2150c4272fe206a37304820b8a55b3d5199bff9ce31",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://e6c948e4a04120c46edbb6c8abb290cb5963342da4038f60a1e3b489c51bcf93",
+				"dweb:/ipfs/QmNLsRR23A14r7iYcjm3DVWhm7VQobnv2Wr3ZLod1KAEzX"
+			]
+		},
+		"contracts/IVerification.sol": {
+			"keccak256": "0x1ecf4a69d81fdb76149ff8bd678359c49f6570fe8c74fcf49c093ab7480b15a7",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://126e5d53d6bb733472115b823907a7602aafd0993ba1779544aac9a823607c9d",
+				"dweb:/ipfs/QmNiTdEjHTQT1y386L6TjNgsDKZNkp8gz1gqzhPNW9hb3p"
+			]
+		},
+		"contracts/StartupFund.sol": {
+			"keccak256": "0x75775360465a1551eb28c9c43368ffd9e67da88c1acbd547758878b9412e6ffa",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://eff5576585a2a6b5579dde1573a82fa01534390760e56fbd75c4cd8eda2de8b6",
+				"dweb:/ipfs/QmWRGv5JUmNeF3HAS3CUGiUE1kFjuuKYyEY4XKzXeRjSy9"
+			]
+		}
+	},
+	"version": 1
+}

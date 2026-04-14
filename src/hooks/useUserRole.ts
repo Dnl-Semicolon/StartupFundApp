@@ -11,13 +11,16 @@ const getEmailKey = (address: string) => `startupfund_email_${address.toLowerCas
 const getBioKey   = (address: string) => `startupfund_bio_${address.toLowerCase()}`;
 
 export function useUserRole() {
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, isInitializing } = useWallet();
   const [role, setRole]               = useState<UserRole>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isLoading, setIsLoading]     = useState(true);
 
   // Sync state on wallet change — checks localStorage first, falls back to on-chain
   useEffect(() => {
+    // Wallet is still auto-reconnecting — don't resolve yet or ProtectedRoute will redirect
+    if (isInitializing) return;
+
     if (!address || !isConnected) {
       setRole(null);
       setDisplayName(null);
@@ -60,7 +63,7 @@ export function useUserRole() {
     };
 
     syncWithChain();
-  }, [address, isConnected]);
+  }, [address, isConnected, isInitializing]);
 
   // Sends register(displayName) tx on-chain, then saves email/bio to localStorage
   const register = useCallback(async (name: string, email?: string, bio?: string) => {

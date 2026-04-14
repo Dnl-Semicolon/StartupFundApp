@@ -45,6 +45,12 @@ export const useWallet = () => {
     error: null,
   });
 
+  // True while the silent auto-reconnect is in flight on page load.
+  // Prevents ProtectedRoute from redirecting before wallet state is known.
+  const [isInitializing, setIsInitializing] = useState(
+    localStorage.getItem('startupfund_wallet_connected') === 'true'
+  );
+
   // ── Connect ──────────────────────────────────────────────────
   const connect = useCallback(async () => {
     if (state.isConnecting) return;
@@ -124,6 +130,7 @@ export const useWallet = () => {
         const list = accounts as string[];
         if (list.length === 0) {
           localStorage.removeItem('startupfund_wallet_connected');
+          setIsInitializing(false);
           return;
         }
         const address = list[0];
@@ -138,9 +145,14 @@ export const useWallet = () => {
           isConnecting: false,
           error: null,
         });
+        setIsInitializing(false);
       }).catch(() => {
         localStorage.removeItem('startupfund_wallet_connected');
+        setIsInitializing(false);
       });
+    } else {
+      // Not expecting a reconnect — no initialization needed
+      setIsInitializing(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -182,6 +194,7 @@ export const useWallet = () => {
     disconnect,
     signTransaction,
     isWrongNetwork,
+    isInitializing,
     shortAddress: state.address
       ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
       : null,

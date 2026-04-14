@@ -63,9 +63,15 @@ const stats = [
 
 export default function Register() {
   const navigate  = useNavigate();
-  const { register } = useUserRole();
+  const { register, isRegistered, isLoading } = useUserRole();
   const [showSuccess, setShowSuccess]       = useState(false);
   const [registeredName, setRegisteredName] = useState('');
+
+  // Already registered — no point showing the form
+  if (!isLoading && isRegistered) {
+    navigate(ROUTE_PATHS.DASHBOARD, { replace: true });
+    return null;
+  }
 
   const handleRegistration = async (userData: { displayName: string; email: string; bio: string; walletAddress: string | null }) => {
     await register(userData.displayName, userData.email, userData.bio);

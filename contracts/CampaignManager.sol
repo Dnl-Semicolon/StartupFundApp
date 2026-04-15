@@ -12,7 +12,7 @@ contract CampaignManager is ICampaign {
 
     // ── Enums & Structs ───────────────────────────────────────────────────────
 
-    enum CampaignStatus { ACTIVE, FUNDED, CANCELLED }
+    enum CampaignStatus { ACTIVE, FUNDED, CANCELLED, FLAGGED }
 
     struct Campaign {
         uint256 id;
@@ -49,6 +49,7 @@ contract CampaignManager is ICampaign {
     );
     event CampaignFunded(uint256 indexed campaignId, uint256 totalRaised);
     event CampaignCancelled(uint256 indexed campaignId);
+    event CampaignFlagged(uint256 indexed campaignId);
 
     // ── Modifiers ─────────────────────────────────────────────────────────────
 
@@ -135,6 +136,17 @@ contract CampaignManager is ICampaign {
         if (isNewContributor) {
             campaigns[campaignId].backersCount++;
         }
+    }
+
+    /**
+     * @dev Marks a campaign as FLAGGED by community vote. Called by StartupFund.flagCampaign().
+     *      Only ACTIVE campaigns can be flagged (settled campaigns are left as-is).
+     */
+    function flagCampaign(uint256 campaignId) external onlyAuthorized {
+        Campaign storage c = campaigns[campaignId];
+        require(c.status == CampaignStatus.ACTIVE, "CampaignManager: not active");
+        c.status = CampaignStatus.FLAGGED;
+        emit CampaignFlagged(campaignId);
     }
 
     /**

@@ -2,14 +2,15 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { 
-  Plus, 
-  Send, 
-  Wallet, 
-  AlertCircle, 
-  Calendar as CalendarIcon, 
-  ArrowUpRight, 
-  Info
+import {
+  Plus,
+  Send,
+  Wallet,
+  AlertCircle,
+  Calendar as CalendarIcon,
+  ArrowUpRight,
+  Info,
+  Flag
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { 
@@ -33,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { useWallet } from '@/hooks/useWallet';
 import { springPresets } from '@/lib/motion';
 
@@ -611,6 +613,101 @@ export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: 
           >
             {isProcessing ? 'Waiting for MetaMask...' : 'Claim Refund'}
           </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Flag Campaign Form — community moderation
+ * Only registered + connected wallets can flag/unflag.
+ * The flag count is always shown as public info.
+ */
+export function FlagCampaignForm({
+  flagCount,
+  threshold,
+  hasAlreadyFlagged,
+  isRegistered,
+  onFlag,
+  onUnflag,
+}: {
+  flagCount: number;
+  threshold: number;
+  hasAlreadyFlagged: boolean;
+  isRegistered: boolean;
+  onFlag: () => Promise<void>;
+  onUnflag: () => Promise<void>;
+}) {
+  const { isConnected } = useWallet();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [txError, setTxError] = React.useState<string | null>(null);
+
+  const canAct = isConnected && isRegistered;
+  const remaining = Math.max(0, threshold - flagCount);
+
+  const handleAction = async (action: () => Promise<void>) => {
+    setIsSubmitting(true);
+    setTxError(null);
+    try {
+      await action();
+    } catch (err: unknown) {
+      setTxError(err instanceof Error ? err.message : 'Transaction failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2 text-red-700 dark:text-red-400">
+          <Flag className="h-4 w-4" />
+          Report Suspicious Campaign
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Flag count — always visible */}
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Community flags</span>
+          <span className="font-mono font-semibold">{flagCount} / {threshold}</span>
+        </div>
+        <Progress value={Math.min(100, (flagCount / threshold) * 100)} className="h-1.5" />
+
+        {/* Actions — only for registered + connected wallets */}
+        {canAct && (
+          <>
+            {txError && (
+              <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1">{txError}</p>
+            )}
+            {hasAlreadyFlagged ? (
+              <Button
+                onClick={() => handleAction(onUnflag)}
+                disabled={isSubmitting}
+                variant="outline"
+                size="sm"
+                className="w-full border-muted text-muted-foreground hover:bg-muted/50"
+              >
+                {isSubmitting ? 'Processing...' : 'Undo flag'}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handleAction(onFlag)}
+                disabled={isSubmitting}
+                variant="outline"
+                size="sm"
+                className="w-full border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400"
+              >
+                {isSubmitting ? 'Submitting to chain...' : 'Flag this campaign'}
+              </Button>
+            )}
+          </>
+        )}
+
+        {remaining > 0 && (
+          <p className="text-[10px] text-muted-foreground text-center">
+            {remaining} more flag{remaining > 1 ? 's' : ''} needed to pause this campaign
+          </p>
         )}
       </CardContent>
     </Card>

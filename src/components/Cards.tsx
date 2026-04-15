@@ -1,15 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Target, 
-  Users, 
-  Calendar, 
-  ArrowUpRight, 
-  TrendingUp, 
-  TrendingDown 
+import {
+  Users,
+  Calendar,
+  ArrowUpRight,
+  TrendingUp,
+  TrendingDown,
+  Flag
 } from 'lucide-react';
-import { Campaign, ROUTE_PATHS } from '@/lib/index';
+import { Campaign, CAMPAIGN_STATUS, ROUTE_PATHS } from '@/lib/index';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -23,25 +23,46 @@ interface CampaignCardProps {
 export function CampaignCard({ campaign }: CampaignCardProps) {
   const progress = Math.min(Math.round((campaign.raisedAmount / campaign.goalAmount) * 100), 100);
   const daysLeft = Math.max(0, Math.ceil((new Date(campaign.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+  const isFlagged = campaign.status === CAMPAIGN_STATUS.FLAGGED;
 
   return (
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
-      <Card className="overflow-hidden border-border bg-card/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
+      <Card className={cn(
+        "overflow-hidden border-border bg-card/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full",
+        isFlagged && "border-red-300 dark:border-red-800 opacity-80"
+      )}>
         <div className="relative aspect-video overflow-hidden">
-          <img 
-            src={campaign.imageUrl} 
-            alt={campaign.title} 
-            className="object-cover w-full h-full transition-transform duration-500 hover:scale-105"
+          <img
+            src={campaign.imageUrl}
+            alt={campaign.title}
+            className={cn(
+              "object-cover w-full h-full transition-transform duration-500 hover:scale-105",
+              isFlagged && "grayscale-[40%]"
+            )}
           />
           <Badge className="absolute top-3 left-3 bg-primary/90 text-primary-foreground backdrop-blur-sm">
             {campaign.category}
           </Badge>
+          {isFlagged && (
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-red-600 text-white flex items-center gap-1 shadow-lg">
+                <Flag className="w-3 h-3" />
+                Flagged
+              </Badge>
+            </div>
+          )}
         </div>
 
         <CardHeader className="p-5 pb-0">
+          {isFlagged && (
+            <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 mb-2">
+              <Flag className="w-3 h-3 shrink-0" />
+              Suspended by community vote — contributors can claim a full refund.
+            </div>
+          )}
           <div className="flex justify-between items-start mb-2">
             <h3 className="font-bold text-xl line-clamp-1 group-hover:text-primary transition-colors">
               {campaign.title}
@@ -55,7 +76,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         <CardContent className="p-5 space-y-4 flex-grow">
           <div className="space-y-2">
             <div className="flex justify-between text-sm font-medium">
-              <span className="text-primary">{progress}% Raised</span>
+              <span className={isFlagged ? 'text-muted-foreground' : 'text-primary'}>{progress}% Raised</span>
               <span className="text-muted-foreground">{campaign.raisedAmount} / {campaign.goalAmount} ETH</span>
             </div>
             <Progress value={progress} className="h-2 bg-secondary" />
@@ -74,9 +95,13 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         </CardContent>
 
         <CardFooter className="p-5 pt-0 mt-auto">
-          <Button asChild className="w-full group" variant="outline">
+          <Button
+            asChild
+            className="w-full group"
+            variant={isFlagged ? 'destructive' : 'outline'}
+          >
             <Link to={ROUTE_PATHS.CAMPAIGN_DETAIL.replace(':id', campaign.id)}>
-              View Campaign
+              {isFlagged ? 'View & Claim Refund' : 'View Campaign'}
               <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
             </Link>
           </Button>

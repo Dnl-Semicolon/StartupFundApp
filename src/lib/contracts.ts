@@ -29,14 +29,20 @@ export const STARTUPFUND_ABI = [
   'function fundCampaign(uint256 campaignId) external payable',
   'function withdraw(uint256 campaignId) external',
   'function claimRefund(uint256 campaignId) external',
+  // Write
+  'function flagCampaign(uint256 campaignId) external',
+  'function unflagCampaign(uint256 campaignId) external',
   // Read
   'function totalCampaigns() external view returns (uint256)',
   'function isRegistered(address wallet) external view returns (bool)',
   'function tokenBalanceOf(address wallet) external view returns (uint256)',
+  'function flagCount(uint256 campaignId) external view returns (uint256)',
+  'function hasFlagged(uint256 campaignId, address wallet) external view returns (bool)',
   // Events (needed for queryFilter)
   'event FundingReceived(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
   'event RefundClaimed(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
   'event TokensMinted(uint256 indexed campaignId, address indexed contributor, uint256 tokens)',
+  'event CampaignFlagged(uint256 indexed campaignId, address indexed flagger, uint256 totalFlags)',
 ];
 
 export const CAMPAIGN_MANAGER_ABI = [

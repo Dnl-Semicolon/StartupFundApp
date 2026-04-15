@@ -9,6 +9,7 @@ const STATUS_MAP: Record<number, Campaign['status']> = {
   0: CAMPAIGN_STATUS.ACTIVE,
   1: CAMPAIGN_STATUS.FUNDED,
   2: CAMPAIGN_STATUS.CANCELLED,
+  3: CAMPAIGN_STATUS.FLAGGED,
 };
 
 // Builds a minimal User from a wallet address
@@ -107,7 +108,13 @@ export function useCampaigns(): UseCampaignsResult {
            err.message.includes('ECONNREFUSED'));
 
         if (isContractError) {
-          setCampaigns(mockCampaigns);
+          // Apply any demo-mode flag overrides stored in localStorage
+          const withOverrides = mockCampaigns.map(c =>
+            localStorage.getItem(`sf_demo_flagged_${c.id}`) === 'true'
+              ? { ...c, status: CAMPAIGN_STATUS.FLAGGED as Campaign['status'] }
+              : c
+          );
+          setCampaigns(withOverrides);
           setIsMockData(true);
           setError(null); // don't show error — mock data handles it gracefully
         } else {

@@ -32,6 +32,12 @@ contract StartupFund {
     // campaignId → contributor → reward already minted
     mapping(uint256 => mapping(address => bool)) private rewardMinted;
 
+    // ── Flagging ──────────────────────────────────────────────────────────────
+
+    uint256 public constant FLAG_THRESHOLD = 5;
+    mapping(uint256 => mapping(address => bool)) public hasFlagged;
+    mapping(uint256 => uint256) public flagCount;
+
     // ── Events ────────────────────────────────────────────────────────────────
 
     event CampaignCreated(uint256 indexed campaignId, address indexed creator);
@@ -39,6 +45,8 @@ contract StartupFund {
     event Withdrawn(uint256 indexed campaignId, address indexed creator, uint256 amount);
     event Refunded(uint256 indexed campaignId, address indexed contributor, uint256 amount);
     event RewardMinted(uint256 indexed campaignId, address indexed contributor, uint256 amount);
+    event CampaignFlagged(uint256 indexed campaignId, address indexed flagger, uint256 totalFlags);
+    event CampaignUnflagged(uint256 indexed campaignId, address indexed unflagged, uint256 totalFlags);
 
     // ── Modifiers ─────────────────────────────────────────────────────────────
 
@@ -227,13 +235,13 @@ contract StartupFund {
         // ── Checks ────────────────────────────────────────────────────────────
         (, , , uint256 deadline, uint8 status) = campaignManager.getCampaign(campaignId);
 
-        // Auto-cancel if deadline passed and still ACTIVE
+        // Auto-cancel if deadline passed and still ACTIVE (not flagged)
         if (status == 0 && block.timestamp >= deadline) {
             campaignManager.checkStatus(campaignId);
             (, , , , status) = campaignManager.getCampaign(campaignId);
         }
 
-        require(status == 2,                          "StartupFund: campaign not cancelled"); // 2 = CANCELLED
+        require(status == 2 || status == 3,           "StartupFund: campaign not cancelled or flagged"); // 2 = CANCELLED, 3 = FLAGGED
 
         uint256 contribution = fundingVault.getContribution(campaignId, msg.sender);
         require(contribution > 0,                     "StartupFund: no contribution to refund");
@@ -245,6 +253,61 @@ contract StartupFund {
         fundingVault.issueRefund(campaignId, msg.sender);
 
         emit Refunded(campaignId, msg.sender, contribution);
+    }
+
+    /**
+     * @dev Community member flags a suspicious campaign.
+     *      - Only registered, unblocked wallets can flag.
+     *      - Each wallet can flag a campaign at most once.
+     *      - Creator cannot flag their own campaign.
+     *      - Only ACTIVE campaigns can be flagged.
+     *      - When flagCount reaches FLAG_THRESHOLD, the campaign is set to FLAGGED
+     *        (contributors can then claim refunds).
+     */
+    function flagCampaign(uint256 campaignId)
+        external
+        notPaused
+        notBlocked
+        onlyRegistered
+    {
+        (address creator, , , , uint8 status) = campaignManager.getCampaign(campaignId);
+
+        require(status == 0,                             "StartupFund: campaign not active");  // 0 = ACTIVE
+        require(msg.sender != creator,                   "StartupFund: creator cannot flag own campaign");
+        require(!hasFlagged[campaignId][msg.sender],     "StartupFund: already flagged");
+
+        hasFlagged[campaignId][msg.sender] = true;
+        flagCount[campaignId]++;
+
+        emit CampaignFlagged(campaignId, msg.sender, flagCount[campaignId]);
+
+        if (flagCount[campaignId] >= FLAG_THRESHOLD) {
+            (bool ok, ) = address(campaignManager).call(
+                abi.encodeWithSignature("flagCampaign(uint256)", campaignId)
+            );
+            require(ok, "StartupFund: flagCampaign on manager failed");
+        }
+    }
+
+    /**
+     * @dev Removes the caller's flag from a campaign.
+     *      - Only callable while campaign is still ACTIVE (threshold not yet hit).
+     *      - Caller must have previously flagged the campaign.
+     */
+    function unflagCampaign(uint256 campaignId)
+        external
+        notPaused
+        notBlocked
+        onlyRegistered
+    {
+        (, , , , uint8 status) = campaignManager.getCampaign(campaignId);
+        require(status == 0,                             "StartupFund: campaign not active");
+        require(hasFlagged[campaignId][msg.sender],      "StartupFund: not flagged");
+
+        hasFlagged[campaignId][msg.sender] = false;
+        flagCount[campaignId]--;
+
+        emit CampaignUnflagged(campaignId, msg.sender, flagCount[campaignId]);
     }
 
     // ── Read functions (match STARTUPFUND_ABI) ────────────────────────────────

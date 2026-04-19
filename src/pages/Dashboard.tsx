@@ -23,6 +23,7 @@ import { RefundRequestForm } from '@/components/Forms';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useWallet } from '@/hooks/useWallet';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useContributorStats } from '@/hooks/useContributorStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const { isConnected, address, balance, shortAddress, connect } = useWallet();
   const { isRegistered, isContributor, isEntrepreneur, displayName } = useUserRole();
   const { campaigns, isMockData } = useCampaigns();
+  const { totalContributed, rewardTokens, transactions, txCount, isLoading: statsLoading } = useContributorStats();
 
   const handleRefundSubmit = async (campaignId: string): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
@@ -201,13 +203,13 @@ export default function Dashboard() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10"
       >
-        <StatsCard title="Total Contributed" value="-- ETH" />
-        <StatsCard title="Reward Tokens" value="-- SFT" />
+        <StatsCard title="Total Contributed" value={statsLoading ? '…' : `${totalContributed} ETH`} />
+        <StatsCard title="Reward Tokens" value={statsLoading ? '…' : `${rewardTokens} SFT`} />
         {isEntrepreneur
           ? <StatsCard title="My Active Ventures" value={myCreatedCampaigns.filter(c => c.status === CAMPAIGN_STATUS.ACTIVE).length.toString()} />
           : <StatsCard title="Active Campaigns" value={activePlatformCampaigns.toString()} />
         }
-        <StatsCard title="Transactions" value="--" />
+        <StatsCard title="Transactions" value={txCount !== null ? txCount.toString() : '--'} />
       </motion.div>
 
       {/* Main Tabs */}
@@ -340,19 +342,53 @@ export default function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Transaction History</CardTitle>
-                <CardDescription>Your on-chain funding activity</CardDescription>
+                <CardDescription>Your on-chain activity — contributions, refunds, and reward tokens</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                  <History className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="font-medium mb-1">No transactions yet</p>
-                  <p className="text-sm max-w-sm">
-                    Your transaction history will appear here once on-chain event indexing is connected. Fund a campaign to get started.
-                  </p>
-                  <Button asChild variant="link" className="mt-4 text-primary">
-                    <Link to={ROUTE_PATHS.CAMPAIGNS}>Browse campaigns</Link>
-                  </Button>
-                </div>
+                {statsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <History className="w-8 h-8 mb-3 opacity-30 animate-pulse" />
+                    <p className="text-sm">Loading on-chain history…</p>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                    <History className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="font-medium mb-1">No transactions yet</p>
+                    <p className="text-sm max-w-sm">Fund a campaign to get started.</p>
+                    <Button asChild variant="link" className="mt-4 text-primary">
+                      <Link to={ROUTE_PATHS.CAMPAIGNS}>Browse campaigns</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {transactions.map(tx => (
+                      <div key={tx.txHash + tx.type} className="flex items-center justify-between py-3 text-sm">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                            tx.type === 'funding' ? 'bg-primary/10 text-primary' :
+                            tx.type === 'refund'  ? 'bg-amber-500/10 text-amber-500' :
+                                                   'bg-chart-2/10 text-chart-2'
+                          }`}>
+                            {tx.type === 'funding' ? <TrendingUp className="w-4 h-4" /> :
+                             tx.type === 'refund'  ? <RefreshCw   className="w-4 h-4" /> :
+                                                    <Coins        className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <p className="font-medium capitalize">
+                              {tx.type === 'funding' ? 'Funded' : tx.type === 'refund' ? 'Refund' : 'Reward tokens'} — Campaign #{tx.campaignId}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-mono">
+                              {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant={tx.type === 'refund' ? 'outline' : 'secondary'}>
+                          {tx.type === 'refund' ? '+' : tx.type === 'tokens' ? '+' : '-'}{tx.amount}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -372,13 +408,20 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                  <Gift className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="font-medium mb-1">No reward tokens yet</p>
-                  <p className="text-sm max-w-sm">
-                    Tokens are minted automatically when a campaign you contributed to is successfully funded and the creator withdraws. Token balances will display here once contract reads are connected.
-                  </p>
-                </div>
+                {rewardTokens !== '--' && rewardTokens !== '0' ? (
+                  <div className="text-center py-8">
+                    <p className="text-5xl font-bold font-mono text-primary">{rewardTokens}</p>
+                    <p className="text-muted-foreground mt-2">SFT tokens earned</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                    <Gift className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="font-medium mb-1">No reward tokens yet</p>
+                    <p className="text-sm max-w-sm">
+                      Tokens are minted automatically when a campaign you contributed to is successfully funded and the creator withdraws.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

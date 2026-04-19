@@ -1,20 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { parseEther } from 'ethers';
-import { getStartupFund, ensureRegistered } from '@/lib/contracts';
+import { getStartupFund, getReadContract, ensureRegistered, STARTUPFUND_ABI } from '@/lib/contracts';
+import { CONTRACT_ADDRESSES } from '@/lib/contractAddresses';
 import { useWallet } from '@/hooks/useWallet';
 import { useUserRole } from '@/hooks/useUserRole';
-import { 
-  Clock, 
-  Users, 
-  Target, 
-  Shield, 
-  CheckCircle2, 
-  Circle, 
-  ArrowLeft, 
+import {
+  Clock,
+  Users,
+  Target,
+  Shield,
+  CheckCircle2,
+  Circle,
+  ArrowLeft,
   ExternalLink,
   TrendingUp,
-  Award
+  Award,
+  Flag
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -25,7 +27,7 @@ import {
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { Loader2 } from 'lucide-react';
 import { StatsCard } from '@/components/Cards';
-import { FundCampaignForm, WithdrawForm, RefundRequestForm } from '@/components/Forms';
+import { FundCampaignForm, WithdrawForm, RefundRequestForm, FlagCampaignForm } from '@/components/Forms';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -52,6 +54,46 @@ export default function CampaignDetail() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [campaign]);
 
+  // ── Flag state ────────────────────────────────────────────────────────────
+  const FLAG_THRESHOLD = 5;
+
+  const [flagCount,        setFlagCount]        = useState(0);
+  const [hasAlreadyFlagged, setHasAlreadyFlagged] = useState(false);
+  // demo mode only: campaign reached threshold → treat as FLAGGED status
+  const [demoFlagged,      setDemoFlagged]      = useState(false);
+
+  // localStorage helpers for demo mode persistence
+  const demoFlaggKey  = (cid: string) => `sf_demo_flags_${cid}`;
+  const demoFlaggdKey = (cid: string) => `sf_demo_flagged_${cid}`;
+
+  useEffect(() => {
+    if (!campaign) return;
+    const isDemo = !/^\d+$/.test(campaign.id);
+
+    if (isDemo) {
+      // Load persisted demo flags from localStorage
+      const raw = localStorage.getItem(demoFlaggKey(campaign.id));
+      const flaggers: string[] = raw ? JSON.parse(raw) : [];
+      setFlagCount(flaggers.length);
+      setHasAlreadyFlagged(address ? flaggers.includes(address.toLowerCase()) : false);
+      setDemoFlagged(localStorage.getItem(demoFlaggdKey(campaign.id)) === 'true');
+    } else {
+      // Load from chain
+      const sf = getReadContract(CONTRACT_ADDRESSES.startupFund, STARTUPFUND_ABI);
+      const cid = BigInt(campaign.id);
+      sf.flagCount(cid)
+        .then((count: bigint) => setFlagCount(Number(count)))
+        .catch(() => {});
+      if (address) {
+        sf.hasFlagged(cid, address)
+          .then((flagged: boolean) => setHasAlreadyFlagged(flagged))
+          .catch(() => {});
+      } else {
+        setHasAlreadyFlagged(false);
+      }
+    }
+  }, [campaign?.id, address]);
+
   if (campaignsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -77,12 +119,17 @@ export default function CampaignDetail() {
   const isCreator = !!(address && campaign.creator.walletAddress &&
     address.toLowerCase() === campaign.creator.walletAddress.toLowerCase());
 
+  // In demo mode, demoFlagged overrides the campaign status when threshold is hit
+  const effectiveStatus = demoFlagged ? CAMPAIGN_STATUS.FLAGGED : campaign.status;
+
   // Sidebar form visibility rules
-  const showFundForm     = isContributor && !isCreator && campaign.status === CAMPAIGN_STATUS.ACTIVE && daysLeft > 0;
-  const showWithdrawForm = isEntrepreneur && isCreator  && campaign.status === CAMPAIGN_STATUS.FUNDED;
-  const showRefundForm   = isContributor && !isCreator  && campaign.status === CAMPAIGN_STATUS.CANCELLED;
-  const showRegisterPrompt = !isRegistered && campaign.status === CAMPAIGN_STATUS.ACTIVE;
-  const showCreatorActive  = isCreator && campaign.status === CAMPAIGN_STATUS.ACTIVE;
+  const showFundForm     = isContributor && !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && daysLeft > 0;
+  const showWithdrawForm = isEntrepreneur && isCreator  && effectiveStatus === CAMPAIGN_STATUS.FUNDED;
+  const showRefundForm   = isContributor && !isCreator  && (effectiveStatus === CAMPAIGN_STATUS.CANCELLED || effectiveStatus === CAMPAIGN_STATUS.FLAGGED);
+  // Flag form: always show for non-creators on active campaigns (form handles unregistered/disconnected internally)
+  const showFlagButton   = !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
+  const showRegisterPrompt = !isRegistered && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
+  const showCreatorActive  = isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
 
   const handleFundingSubmit = async (amount: number): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
@@ -106,6 +153,62 @@ export default function CampaignDetail() {
     const contract = await getStartupFund(true);
     const tx = await contract.claimRefund(BigInt(campaign.id));
     await tx.wait();
+  };
+
+  const handleFlagSubmit = async (): Promise<void> => {
+    if (!address) throw new Error('Wallet not connected');
+
+    const isDemo = !/^\d+$/.test(campaign.id);
+
+    if (isDemo) {
+      // Demo mode — persist to localStorage
+      const raw = localStorage.getItem(demoFlaggKey(campaign.id));
+      const flaggers: string[] = raw ? JSON.parse(raw) : [];
+      if (!flaggers.includes(address.toLowerCase())) {
+        flaggers.push(address.toLowerCase());
+        localStorage.setItem(demoFlaggKey(campaign.id), JSON.stringify(flaggers));
+      }
+      setFlagCount(flaggers.length);
+      setHasAlreadyFlagged(true);
+      if (flaggers.length >= FLAG_THRESHOLD) {
+        localStorage.setItem(demoFlaggdKey(campaign.id), 'true');
+        setDemoFlagged(true);
+      }
+      return;
+    }
+
+    // Real mode — on-chain tx
+    await ensureRegistered(address);
+    const contract = await getStartupFund(true);
+    const tx = await contract.flagCampaign(BigInt(campaign.id));
+    await tx.wait();
+    setFlagCount(prev => prev + 1);
+    setHasAlreadyFlagged(true);
+  };
+
+  const handleUnflagSubmit = async (): Promise<void> => {
+    if (!address) throw new Error('Wallet not connected');
+
+    const isDemo = !/^\d+$/.test(campaign.id);
+
+    if (isDemo) {
+      // Demo mode — remove from localStorage
+      const raw = localStorage.getItem(demoFlaggKey(campaign.id));
+      const flaggers: string[] = raw ? JSON.parse(raw) : [];
+      const updated = flaggers.filter(a => a !== address.toLowerCase());
+      localStorage.setItem(demoFlaggKey(campaign.id), JSON.stringify(updated));
+      setFlagCount(updated.length);
+      setHasAlreadyFlagged(false);
+      return;
+    }
+
+    // Real mode — on-chain tx
+    await ensureRegistered(address);
+    const contract = await getStartupFund(true);
+    const tx = await contract.unflagCampaign(BigInt(campaign.id));
+    await tx.wait();
+    setFlagCount(prev => Math.max(0, prev - 1));
+    setHasAlreadyFlagged(false);
   };
 
   return (
@@ -136,10 +239,14 @@ export default function CampaignDetail() {
                 <Badge variant="secondary" className="bg-background/80 backdrop-blur-md">
                   {campaign.category}
                 </Badge>
-                <Badge 
-                  className={campaign.status === CAMPAIGN_STATUS.ACTIVE ? 'bg-chart-2 text-white' : 'bg-muted text-muted-foreground'}
+                <Badge
+                  className={
+                    effectiveStatus === CAMPAIGN_STATUS.ACTIVE  ? 'bg-chart-2 text-white' :
+                    effectiveStatus === CAMPAIGN_STATUS.FLAGGED ? 'bg-red-600 text-white' :
+                    'bg-muted text-muted-foreground'
+                  }
                 >
-                  {campaign.status.toUpperCase()}
+                  {effectiveStatus.toUpperCase()}
                 </Badge>
               </div>
             </div>
@@ -302,6 +409,31 @@ export default function CampaignDetail() {
                 />
               )}
 
+              {/* ACTIVE + registered non-creator → Flag form */}
+              {showFlagButton && (
+                <FlagCampaignForm
+                  flagCount={flagCount}
+                  threshold={FLAG_THRESHOLD}
+                  hasAlreadyFlagged={hasAlreadyFlagged}
+                  isRegistered={isRegistered}
+                  onFlag={handleFlagSubmit}
+                  onUnflag={handleUnflagSubmit}
+                />
+              )}
+
+              {/* FLAGGED → banner for everyone */}
+              {effectiveStatus === CAMPAIGN_STATUS.FLAGGED && (
+                <div className="rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-4 text-sm text-center space-y-1">
+                  <div className="flex items-center justify-center gap-2 text-red-700 dark:text-red-400 font-semibold">
+                    <Flag className="w-4 h-4" />
+                    Campaign Flagged by Community
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    This campaign was paused after receiving {FLAG_THRESHOLD} community flags. Contributors can claim a full refund.
+                  </p>
+                </div>
+              )}
+
               {/* ACTIVE + creator → Creator info banner */}
               {showCreatorActive && (
                 <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-center space-y-1">
@@ -329,7 +461,7 @@ export default function CampaignDetail() {
               )}
 
               {/* Campaign is FUNDED and user is not creator → funded banner */}
-              {campaign.status === CAMPAIGN_STATUS.FUNDED && !isCreator && (
+              {effectiveStatus === CAMPAIGN_STATUS.FUNDED && !isCreator && (
                 <div className="rounded-lg bg-chart-2/10 border border-chart-2/30 p-4 text-sm text-center">
                   <p className="font-semibold text-chart-2">Campaign Successfully Funded</p>
                   <p className="text-muted-foreground text-xs mt-1">
@@ -338,8 +470,8 @@ export default function CampaignDetail() {
                 </div>
               )}
 
-              {/* Campaign is CANCELLED and user is not contributor (e.g. entrepreneur without contribution) */}
-              {campaign.status === CAMPAIGN_STATUS.CANCELLED && !isContributor && !isCreator && (
+              {/* Campaign is CANCELLED (not flagged) and user has no contribution to refund */}
+              {effectiveStatus === CAMPAIGN_STATUS.CANCELLED && !isContributor && !isCreator && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-center">
                   <p className="font-semibold text-destructive">Campaign Cancelled</p>
                   <p className="text-muted-foreground text-xs mt-1">

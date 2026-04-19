@@ -14,6 +14,7 @@ export const CAMPAIGN_STATUS = {
   FUNDED: 'funded',
   EXPIRED: 'expired',
   CANCELLED: 'cancelled',
+  FLAGGED: 'flagged',
 } as const;
 
 export type CampaignStatus = typeof CAMPAIGN_STATUS[keyof typeof CAMPAIGN_STATUS];

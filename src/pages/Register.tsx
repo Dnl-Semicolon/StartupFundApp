@@ -63,12 +63,18 @@ const stats = [
 
 export default function Register() {
   const navigate  = useNavigate();
-  const { register } = useUserRole();
-  const [showSuccess, setShowSuccess] = useState(false);
+  const { register, isRegistered, isLoading } = useUserRole();
+  const [showSuccess, setShowSuccess]       = useState(false);
   const [registeredName, setRegisteredName] = useState('');
 
-  const handleRegistration = (userData: { displayName: string; email: string; bio: string; walletAddress: string | null }) => {
-    register(userData.displayName);
+  // Already registered — no point showing the form
+  if (!isLoading && isRegistered) {
+    navigate(ROUTE_PATHS.DASHBOARD, { replace: true });
+    return null;
+  }
+
+  const handleRegistration = async (userData: { displayName: string; email: string; bio: string; walletAddress: string | null }) => {
+    await register(userData.displayName, userData.email, userData.bio);
     setRegisteredName(userData.displayName);
     setShowSuccess(true);
     setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);
@@ -115,7 +121,7 @@ export default function Register() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-accent/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-accent/10 pointer-events-none" />
         <div className="container mx-auto px-4 py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 

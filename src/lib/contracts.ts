@@ -1,18 +1,26 @@
 import { BrowserProvider, JsonRpcProvider, Contract } from 'ethers';
 import { CONTRACT_ADDRESSES } from './contractAddresses';
 
-const GANACHE_RPC = 'http://127.0.0.1:7545';
+// In dev, requests go through Vite's proxy (/ganache-rpc → http://127.0.0.1:7545)
+// to avoid CORS errors. In production, point directly at your RPC node.
+const GANACHE_RPC =
+  import.meta.env.DEV
+    ? `${window.location.origin}/ganache-rpc`
+    : 'http://127.0.0.1:7545';
 
-/** Read-only provider — hits Ganache directly, no MetaMask needed */
+/** Read-only provider — hits Ganache via Vite proxy, no MetaMask needed */
 const getReadProvider = () => new JsonRpcProvider(GANACHE_RPC);
 
 // ─── Minimal ABIs (only the functions the frontend actually calls) ───────────
 
 export const ACCESS_CONTROL_ABI = [
-  'function register() external',
+  'function register(string displayName) external',
+  'function becomeEntrepreneur() external',
   'function isRegistered(address wallet) external view returns (bool)',
+  'function isEntrepreneur(address wallet) external view returns (bool)',
   'function isBlocked(address wallet) external view returns (bool)',
   'function paused() external view returns (bool)',
+  'function getDisplayName(address wallet) external view returns (string)',
 ];
 
 export const STARTUPFUND_ABI = [
@@ -21,10 +29,20 @@ export const STARTUPFUND_ABI = [
   'function fundCampaign(uint256 campaignId) external payable',
   'function withdraw(uint256 campaignId) external',
   'function claimRefund(uint256 campaignId) external',
+  // Write
+  'function flagCampaign(uint256 campaignId) external',
+  'function unflagCampaign(uint256 campaignId) external',
   // Read
   'function totalCampaigns() external view returns (uint256)',
   'function isRegistered(address wallet) external view returns (bool)',
   'function tokenBalanceOf(address wallet) external view returns (uint256)',
+  'function flagCount(uint256 campaignId) external view returns (uint256)',
+  'function hasFlagged(uint256 campaignId, address wallet) external view returns (bool)',
+  // Events (needed for queryFilter)
+  'event FundingReceived(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
+  'event RefundClaimed(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
+  'event TokensMinted(uint256 indexed campaignId, address indexed contributor, uint256 tokens)',
+  'event CampaignFlagged(uint256 indexed campaignId, address indexed flagger, uint256 totalFlags)',
 ];
 
 export const CAMPAIGN_MANAGER_ABI = [
@@ -82,11 +100,9 @@ export const getRewardToken = () =>
 // ─── Shared helper: ensure user is registered, register if not ──────────────
 
 export const ensureRegistered = async (address: string): Promise<void> => {
-  const ac = getAccessControl(false);
+  const ac = getReadContract(CONTRACT_ADDRESSES.accessControl, ACCESS_CONTROL_ABI);
   const registered = await ac.isRegistered(address) as boolean;
   if (!registered) {
-    const acWrite = await getAccessControl(true);
-    const tx = await acWrite.register();
-    await tx.wait();
+    throw new Error('Please register your wallet before performing this action.');
   }
 };

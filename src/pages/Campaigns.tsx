@@ -40,6 +40,11 @@ export default function Campaigns() {
         return matchesSearch && matchesCategory;
       })
       .sort((a, b) => {
+        // Always push flagged campaigns to the bottom regardless of sort
+        const aFlagged = a.status === CAMPAIGN_STATUS.FLAGGED ? 1 : 0;
+        const bFlagged = b.status === CAMPAIGN_STATUS.FLAGGED ? 1 : 0;
+        if (aFlagged !== bFlagged) return aFlagged - bFlagged;
+
         switch (sortBy) {
           case 'newest':
             // No createdAt on chain — sort by id descending (insertion order)

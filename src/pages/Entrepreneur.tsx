@@ -149,16 +149,25 @@ export default function Entrepreneur() {
   const { isConnected, connect, isConnecting } = useWallet();
   const { isRegistered, isEntrepreneur, upgradeToEntrepreneur } = useUserRole();
   const navigate = useNavigate();
-  const [openFaq, setOpenFaq] = useState<string>('');
+  const [openFaq, setOpenFaq]       = useState<string>('');
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
-  const handleGetStarted = () => {
+  const handleGetStarted = async () => {
     if (!isConnected) {
       navigate(ROUTE_PATHS.REGISTER);
     } else if (!isRegistered) {
       navigate(ROUTE_PATHS.REGISTER);
     } else if (!isEntrepreneur) {
-      upgradeToEntrepreneur();
-      navigate(ROUTE_PATHS.CREATE_CAMPAIGN);
+      setIsUpgrading(true);
+      setUpgradeError(null);
+      try {
+        await upgradeToEntrepreneur();
+        navigate(ROUTE_PATHS.CREATE_CAMPAIGN);
+      } catch (err: any) {
+        setUpgradeError(err.reason ?? err.message ?? 'Transaction failed. Check MetaMask and try again.');
+        setIsUpgrading(false);
+      }
     } else {
       navigate(ROUTE_PATHS.CREATE_CAMPAIGN);
     }
@@ -212,13 +221,17 @@ export default function Entrepreneur() {
             </motion.p>
 
             <motion.div variants={staggerItem} className="flex flex-wrap gap-4 justify-center">
+              {upgradeError && (
+                <p className="text-destructive text-sm text-center">{upgradeError}</p>
+              )}
               <Button
                 size="lg"
                 onClick={handleGetStarted}
+                disabled={isUpgrading}
                 className="h-14 px-10 text-lg gap-2 shadow-xl shadow-primary/20"
               >
                 <Rocket className="w-5 h-5" />
-                {ctaLabel}
+                {isUpgrading ? 'Confirm in MetaMask...' : ctaLabel}
                 <ArrowRight className="w-4 h-4" />
               </Button>
               <Button size="lg" variant="outline" asChild className="h-14 px-10 text-lg">
@@ -472,12 +485,16 @@ export default function Entrepreneur() {
               Register your wallet, fill in your campaign details, and you're live on the blockchain in under two minutes.
             </motion.p>
             <motion.div variants={staggerItem} className="flex flex-wrap gap-4 justify-center">
+              {upgradeError && (
+                <p className="text-destructive text-sm text-center">{upgradeError}</p>
+              )}
               <Button
                 size="lg"
                 onClick={handleGetStarted}
+                disabled={isUpgrading}
                 className="h-14 px-12 text-lg gap-2 shadow-xl shadow-primary/25"
               >
-                {ctaLabel}
+                {isUpgrading ? 'Confirm in MetaMask...' : ctaLabel}
                 <ArrowRight className="w-4 h-4" />
               </Button>
               <Button size="lg" variant="ghost" asChild className="h-14 px-8 text-lg">

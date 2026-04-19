@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ROUTE_PATHS } from "@/lib/index";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -12,8 +12,7 @@ import CampaignDetail from "@/pages/CampaignDetail";
 import CreateCampaign from "@/pages/CreateCampaign";
 import Dashboard from "@/pages/Dashboard";
 import About from "@/pages/About";
-import Register from "@/pages/Register";
-import Entrepreneur from "@/pages/Entrepreneur";
+import NotFound from "@/pages/not-found/Index";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,46 +32,20 @@ export default function App() {
         <BrowserRouter>
           <Layout>
             <Routes>
-              <Route 
-                path={ROUTE_PATHS.HOME} 
-                element={<Home />} 
-              />
-              <Route 
-                path={ROUTE_PATHS.CAMPAIGNS} 
-                element={<Campaigns />} 
-              />
-              <Route 
-                path={ROUTE_PATHS.CAMPAIGN_DETAIL} 
-                element={<CampaignDetail />} 
-              />
+              <Route path={ROUTE_PATHS.HOME}            element={<Home />} />
+              <Route path={ROUTE_PATHS.CAMPAIGNS}       element={<Campaigns />} />
+              <Route path={ROUTE_PATHS.CAMPAIGN_DETAIL} element={<CampaignDetail />} />
               <Route
                 path={ROUTE_PATHS.CREATE_CAMPAIGN}
                 element={
-                  <ProtectedRoute requireEntrepreneur>
+                  <ProtectedRoute>
                     <CreateCampaign />
                   </ProtectedRoute>
                 }
               />
-              <Route 
-                path={ROUTE_PATHS.DASHBOARD} 
-                element={<Dashboard />} 
-              />
-              <Route 
-                path={ROUTE_PATHS.ABOUT} 
-                element={<About />} 
-              />
-              <Route
-                path={ROUTE_PATHS.REGISTER}
-                element={<Register />}
-              />
-              <Route
-                path={ROUTE_PATHS.ENTREPRENEUR}
-                element={<Entrepreneur />}
-              />
-              <Route
-                path="*" 
-                element={<Navigate to={ROUTE_PATHS.HOME} replace />} 
-              />
+              <Route path={ROUTE_PATHS.DASHBOARD} element={<Dashboard />} />
+              <Route path={ROUTE_PATHS.ABOUT}     element={<About />} />
+              <Route path="*"                     element={<NotFound />} />
             </Routes>
           </Layout>
         </BrowserRouter>

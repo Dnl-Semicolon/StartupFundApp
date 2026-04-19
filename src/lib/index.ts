@@ -5,8 +5,6 @@ export const ROUTE_PATHS = {
   CREATE_CAMPAIGN: '/create',
   DASHBOARD: '/dashboard',
   ABOUT: '/about',
-  REGISTER: '/register',
-  ENTREPRENEUR: '/become-entrepreneur',
 } as const;
 
 export const CAMPAIGN_STATUS = {

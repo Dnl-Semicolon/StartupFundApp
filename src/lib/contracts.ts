@@ -14,13 +14,11 @@ const getReadProvider = () => new JsonRpcProvider(GANACHE_RPC);
 // ─── Minimal ABIs (only the functions the frontend actually calls) ───────────
 
 export const ACCESS_CONTROL_ABI = [
-  'function register(string displayName) external',
-  'function becomeEntrepreneur() external',
+  'function register() external',
   'function isRegistered(address wallet) external view returns (bool)',
   'function isEntrepreneur(address wallet) external view returns (bool)',
   'function isBlocked(address wallet) external view returns (bool)',
   'function paused() external view returns (bool)',
-  'function getDisplayName(address wallet) external view returns (string)',
 ];
 
 export const STARTUPFUND_ABI = [
@@ -97,12 +95,15 @@ export const getRewardToken = () =>
   getReadContract(CONTRACT_ADDRESSES.rewardToken, REWARD_TOKEN_ABI);
 
 
-// ─── Shared helper: ensure user is registered, register if not ──────────────
+// ─── Shared helper: verify registration before contract calls ─────────────────
 
 export const ensureRegistered = async (address: string): Promise<void> => {
+  const cached = localStorage.getItem(`sf_registered_${address.toLowerCase()}`);
+  if (cached === 'true') return;
   const ac = getReadContract(CONTRACT_ADDRESSES.accessControl, ACCESS_CONTROL_ABI);
   const registered = await ac.isRegistered(address) as boolean;
   if (!registered) {
-    throw new Error('Please register your wallet before performing this action.');
+    throw new Error('Account setup incomplete. Please complete setup and try again.');
   }
+  localStorage.setItem(`sf_registered_${address.toLowerCase()}`, 'true');
 };

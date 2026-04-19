@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { 
-  Menu, 
-  X, 
-  Wallet, 
-  ChevronDown, 
-  LogOut, 
-  LayoutDashboard, 
-  PlusCircle, 
+import {
+  Menu,
+  Wallet,
+  ChevronDown,
+  LogOut,
+  LayoutDashboard,
+  PlusCircle,
   Rocket,
   Info,
   ShieldCheck
@@ -16,7 +15,7 @@ import { SiX, SiLinkedin, SiGithub } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROUTE_PATHS } from '@/lib';
 import { useWallet } from '@/hooks/useWallet';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useRegistration } from '@/hooks/useRegistration';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -40,8 +39,8 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { isConnected, address, shortAddress, balance, isConnecting, connect, disconnect, isWrongNetwork } = useWallet();
-  const { isEntrepreneur } = useUserRole();
+  const { isConnected, address, shortAddress, balance, isConnecting, connect, disconnect, isWrongNetwork, isInitializing } = useWallet();
+  const { isRegistered, register } = useRegistration();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -59,13 +58,17 @@ export function Layout({ children }: LayoutProps) {
     setIsMobileMenuOpen(false);
   }, [location]);
 
-  // "For Entrepreneurs" shows to everyone who is NOT yet an entrepreneur (it's the upgrade path)
-  // "Create" shows only to entrepreneurs
+  // Auto-register new wallets silently on first connect
+  useEffect(() => {
+    if (!isInitializing && isConnected && address && !isRegistered) {
+      register(true);
+    }
+  }, [isConnected, address, isRegistered, isInitializing]);
+
   const navLinks = [
-    { name: 'Discover',          path: ROUTE_PATHS.CAMPAIGNS,        icon: Rocket,      show: true },
-    { name: 'For Entrepreneurs', path: ROUTE_PATHS.ENTREPRENEUR,     icon: ShieldCheck, show: !isEntrepreneur },
-    { name: 'Create',            path: ROUTE_PATHS.CREATE_CAMPAIGN,  icon: PlusCircle,  show: isEntrepreneur },
-    { name: 'About',             path: ROUTE_PATHS.ABOUT,            icon: Info,        show: true },
+    { name: 'Discover', path: ROUTE_PATHS.CAMPAIGNS,       icon: Rocket,     show: true },
+    { name: 'Create',   path: ROUTE_PATHS.CREATE_CAMPAIGN, icon: PlusCircle, show: isConnected },
+    { name: 'About',    path: ROUTE_PATHS.ABOUT,           icon: Info,       show: true },
   ].filter(l => l.show);
 
   return (
@@ -151,21 +154,14 @@ export function Layout({ children }: LayoutProps) {
                 </DropdownMenu>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link to={ROUTE_PATHS.REGISTER}>
-                  <Button variant="outline" size="sm">
-                    Register
-                  </Button>
-                </Link>
-                <Button 
-                  onClick={connect} 
-                  disabled={isConnecting} 
-                  className="gap-2 shadow-lg shadow-primary/20"
-                >
-                  <Wallet className="w-4 h-4" />
-                  {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-                </Button>
-              </div>
+              <Button
+                onClick={connect}
+                disabled={isConnecting}
+                className="gap-2 shadow-lg shadow-primary/20"
+              >
+                <Wallet className="w-4 h-4" />
+                {isConnecting ? 'Connecting…' : 'Connect Wallet'}
+              </Button>
             )}
 
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -210,7 +206,6 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       <main className="flex-1 pt-16">
-        {/* Wrong-network warning — shown whenever MetaMask is not on Ganache (Chain ID 1337) */}
         <AnimatePresence>
           {isWrongNetwork && (
             <motion.div
@@ -269,8 +264,7 @@ export function Layout({ children }: LayoutProps) {
               <h4 className="font-bold mb-6">Platform</h4>
               <ul className="space-y-4 text-sm text-muted-foreground">
                 <li><Link to={ROUTE_PATHS.CAMPAIGNS} className="hover:text-primary transition-colors">Browse Projects</Link></li>
-                <li><Link to={ROUTE_PATHS.CREATE_CAMPAIGN} className="hover:text-primary transition-colors">Start a Campaign</Link></li>
-                <li><Link to={ROUTE_PATHS.ENTREPRENEUR} className="hover:text-primary transition-colors">Become an Entrepreneur</Link></li>
+                <li><Link to={ROUTE_PATHS.CREATE_CAMPAIGN} className="hover:text-primary transition-colors">Launch a Campaign</Link></li>
                 <li><Link to="#" className="hover:text-primary transition-colors">Success Stories</Link></li>
               </ul>
             </div>

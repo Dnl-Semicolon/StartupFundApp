@@ -4,7 +4,8 @@ import { parseEther } from 'ethers';
 import { getStartupFund, getReadContract, ensureRegistered, STARTUPFUND_ABI } from '@/lib/contracts';
 import { CONTRACT_ADDRESSES } from '@/lib/contractAddresses';
 import { useWallet } from '@/hooks/useWallet';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useRegistration } from '@/hooks/useRegistration';
+import { ConnectPrompt } from '@/components/ConnectPrompt';
 import {
   Clock,
   Users,
@@ -37,8 +38,8 @@ import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/mo
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
-  const { address } = useWallet();
-  const { isRegistered, isContributor, isEntrepreneur } = useUserRole();
+  const { address, isConnected } = useWallet();
+  const { isRegistered } = useRegistration();
   const { campaigns, loading: campaignsLoading } = useCampaigns();
 
   const campaign = useMemo(() => {
@@ -123,13 +124,13 @@ export default function CampaignDetail() {
   const effectiveStatus = demoFlagged ? CAMPAIGN_STATUS.FLAGGED : campaign.status;
 
   // Sidebar form visibility rules
-  const showFundForm     = isContributor && !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && daysLeft > 0;
-  const showWithdrawForm = isEntrepreneur && isCreator  && effectiveStatus === CAMPAIGN_STATUS.FUNDED;
-  const showRefundForm   = isContributor && !isCreator  && (effectiveStatus === CAMPAIGN_STATUS.CANCELLED || effectiveStatus === CAMPAIGN_STATUS.FLAGGED);
-  // Flag form: always show for non-creators on active campaigns (form handles unregistered/disconnected internally)
+  const canAct           = isConnected && isRegistered;
+  const showFundForm     = canAct && !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && daysLeft > 0;
+  const showWithdrawForm = isCreator && effectiveStatus === CAMPAIGN_STATUS.FUNDED;
+  const showRefundForm   = canAct && !isCreator && (effectiveStatus === CAMPAIGN_STATUS.CANCELLED || effectiveStatus === CAMPAIGN_STATUS.FLAGGED);
   const showFlagButton   = !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
-  const showRegisterPrompt = !isRegistered && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
-  const showCreatorActive  = isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
+  const showConnectPrompt = !isConnected && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && !isCreator;
+  const showCreatorActive = isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
 
   const handleFundingSubmit = async (amount: number): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
@@ -444,20 +445,12 @@ export default function CampaignDetail() {
                 </div>
               )}
 
-              {/* Not registered, campaign is active → prompt to register */}
-              {showRegisterPrompt && (
-                <div className="rounded-lg bg-muted/50 border border-border p-4 text-sm text-center space-y-3">
-                  <p className="font-medium">Want to back this project?</p>
-                  <p className="text-muted-foreground text-xs">
-                    Register an account to contribute ETH and earn reward tokens.
-                  </p>
-                  <Link
-                    to={ROUTE_PATHS.REGISTER}
-                    className="inline-block w-full text-center bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    Register to Fund
-                  </Link>
-                </div>
+              {/* Not connected, campaign is active → prompt to connect */}
+              {showConnectPrompt && (
+                <ConnectPrompt
+                  compact
+                  message="Connect your wallet to contribute ETH and earn reward tokens."
+                />
               )}
 
               {/* Campaign is FUNDED and user is not creator → funded banner */}
@@ -470,8 +463,8 @@ export default function CampaignDetail() {
                 </div>
               )}
 
-              {/* Campaign is CANCELLED (not flagged) and user has no contribution to refund */}
-              {effectiveStatus === CAMPAIGN_STATUS.CANCELLED && !isContributor && !isCreator && (
+              {/* Campaign is CANCELLED (not flagged) and user is not connected */}
+              {effectiveStatus === CAMPAIGN_STATUS.CANCELLED && !isConnected && !isCreator && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-center">
                   <p className="font-semibold text-destructive">Campaign Cancelled</p>
                   <p className="text-muted-foreground text-xs mt-1">

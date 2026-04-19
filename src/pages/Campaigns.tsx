@@ -246,7 +246,7 @@ export default function Campaigns() {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20" asChild>
-                <Link to={ROUTE_PATHS.ENTREPRENEUR}>Launch Your Campaign</Link>
+                <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>Launch Your Campaign</Link>
               </Button>
               <Button size="lg" variant="outline" className="rounded-full px-8" asChild>
                 <Link to={ROUTE_PATHS.ABOUT}>How it Works</Link>

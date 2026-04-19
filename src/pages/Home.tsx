@@ -14,7 +14,6 @@ import {
 import { ROUTE_PATHS } from '@/lib/index';
 import { CampaignCard, FeatureCard, StatsCard } from '@/components/Cards';
 import { useCampaigns } from '@/hooks/useCampaigns';
-import { useUserRole } from '@/hooks/useUserRole';
 import { IMAGES } from '@/assets/images';
 import { Button } from '@/components/ui/button';
 
@@ -34,7 +33,6 @@ const staggerContainer = {
 
 export default function Home() {
   const { campaigns, isMockData } = useCampaigns();
-  const { isEntrepreneur } = useUserRole();
   const featuredCampaigns = campaigns.slice(0, 3);
 
   return (
@@ -88,16 +86,9 @@ export default function Home() {
                     Explore Campaigns <ArrowRight className="ml-2 w-5 h-5" />
                   </Link>
                 </Button>
-                {/* Only show "Pitch Your Idea" to entrepreneurs or unregistered users (discovery) */}
-                {isEntrepreneur ? (
-                  <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold" asChild>
-                    <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>Launch a Campaign</Link>
-                  </Button>
-                ) : (
-                  <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold" asChild>
-                    <Link to={ROUTE_PATHS.ENTREPRENEUR}>For Entrepreneurs</Link>
-                  </Button>
-                )}
+                <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold" asChild>
+                  <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>Launch a Campaign</Link>
+                </Button>
               </motion.div>
 
               <motion.div variants={fadeInUp} className="flex items-center gap-8 pt-4">

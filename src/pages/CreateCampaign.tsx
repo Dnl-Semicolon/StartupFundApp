@@ -49,6 +49,14 @@ export default function CreateCampaign() {
       // Convert date string "YYYY-MM-DD" → Unix timestamp (seconds)
       const deadline = Math.floor(new Date(data.deadline).getTime() / 1000);
 
+      // Parse tags: split on commas, trim, lowercase, dedupe, drop empty
+      const rawTags: string = typeof data.tags === 'string' ? data.tags : '';
+      const tags: string[] = rawTags
+        ? Array.from(new Set(
+            rawTags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+          ))
+        : [];
+
       const contract = await getStartupFund(true);
       const tx = await contract.createCampaign(
         data.title,
@@ -61,6 +69,7 @@ export default function CreateCampaign() {
         minWei,
         deadline,
         data.tokenSymbol,
+        tags,
       );
       await tx.wait();
 

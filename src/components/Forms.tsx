@@ -53,6 +53,7 @@ const createCampaignSchema = z.object({
   }),
   imageUrl: z.string().url("Please provide a valid image URL"),
   tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
+  tags: z.string().optional(),
 });
 
 type CreateCampaignValues = z.infer<typeof createCampaignSchema>;
@@ -69,6 +70,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
       minContribution: 0.01,
       imageUrl: '',
       tokenSymbol: '',
+      tags: '',
       deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     },
   });
@@ -192,6 +194,21 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                         <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                       </div>
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags <span className="text-muted-foreground text-xs font-normal">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="ai, fintech, startup" {...field} />
+                    </FormControl>
+                    <FormDescription>Comma-separated labels. Lowercased + deduped on submit. Helps search surface your campaign.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

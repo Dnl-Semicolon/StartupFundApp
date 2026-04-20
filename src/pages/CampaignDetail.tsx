@@ -17,7 +17,8 @@ import {
   ExternalLink,
   TrendingUp,
   Award,
-  Flag
+  Flag,
+  XCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -29,6 +30,7 @@ import { useCampaigns } from '@/hooks/useCampaigns';
 import { Loader2 } from 'lucide-react';
 import { StatsCard } from '@/components/Cards';
 import { FundCampaignForm, WithdrawForm, RefundRequestForm, FlagCampaignForm } from '@/components/Forms';
+import { VotingPanel } from '@/components/VotingPanel';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -364,6 +366,32 @@ export default function CampaignDetail() {
         </div>
 
         <aside className="space-y-6">
+          {/* PENDING campaigns replace the whole sidebar with the voting panel.
+              No funding/withdraw/refund/flag affordances are valid here. */}
+          {campaign.status === CAMPAIGN_STATUS.PENDING && (
+            <div className="sticky top-24">
+              <VotingPanel campaignId={campaign.id} />
+            </div>
+          )}
+
+          {/* REJECTED campaigns show a terminal banner. Nothing actionable. */}
+          {campaign.status === CAMPAIGN_STATUS.REJECTED && (
+            <Card className="sticky top-24 border-red-500/25 bg-red-500/5 shadow-lg shadow-red-500/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-400">
+                  <XCircle className="w-5 h-5" />
+                  Campaign Rejected
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  This campaign did not meet the community approval threshold and cannot accept contributions.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {campaign.status !== CAMPAIGN_STATUS.PENDING && campaign.status !== CAMPAIGN_STATUS.REJECTED && (
           <Card className="sticky top-24 border-2 border-primary/10 shadow-xl">
             <CardHeader>
               <CardTitle>
@@ -507,6 +535,7 @@ export default function CampaignDetail() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           <div className="flex items-center justify-center gap-4 text-muted-foreground">
             <div className="flex items-center gap-1 text-xs">

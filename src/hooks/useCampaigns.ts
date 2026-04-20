@@ -4,12 +4,14 @@ import { getCampaignManager } from '@/lib/contracts';
 import { Campaign, CAMPAIGN_STATUS } from '@/lib/index';
 import { mockCampaigns } from '@/data/index';
 
-// Maps CampaignManager uint8 status → frontend string
+// Maps CampaignManager uint8 status → frontend string.
+// After the voting-gate redeploy: 0=PENDING, 1=ACTIVE, 2=FUNDED, 3=CANCELLED, 4=REJECTED.
 const STATUS_MAP: Record<number, Campaign['status']> = {
-  0: CAMPAIGN_STATUS.ACTIVE,
-  1: CAMPAIGN_STATUS.FUNDED,
-  2: CAMPAIGN_STATUS.CANCELLED,
-  3: CAMPAIGN_STATUS.FLAGGED,
+  0: CAMPAIGN_STATUS.PENDING,
+  1: CAMPAIGN_STATUS.ACTIVE,
+  2: CAMPAIGN_STATUS.FUNDED,
+  3: CAMPAIGN_STATUS.CANCELLED,
+  4: CAMPAIGN_STATUS.REJECTED,
 };
 
 // Builds a minimal User from a wallet address
@@ -57,10 +59,11 @@ export function useCampaigns(): UseCampaignsResult {
         const fetched: Campaign[] = [];
 
         for (let i = 0; i < count; i++) {
-          const [meta, stats, desc] = await Promise.all([
+          const [meta, stats, desc, tags] = await Promise.all([
             cm.getCampaignMeta(i),
             cm.getCampaignStats(i),
             cm.getCampaignDescription(i),
+            cm.getCampaignTags(i),
           ]);
 
           fetched.push({
@@ -75,7 +78,7 @@ export function useCampaigns(): UseCampaignsResult {
             raisedAmount:     parseFloat(formatEther(stats.raisedAmount as bigint)),
             imageUrl:         meta.imageUrl as string,
             category:         meta.category as Campaign['category'],
-            status:           STATUS_MAP[Number(stats.status)] ?? CAMPAIGN_STATUS.ACTIVE,
+            status:           STATUS_MAP[Number(stats.status)] ?? CAMPAIGN_STATUS.PENDING,
             deadline:         new Date(Number(stats.deadline) * 1000).toISOString(),
             createdAt:        '',
             updatedAt:        '',
@@ -83,6 +86,7 @@ export function useCampaigns(): UseCampaignsResult {
             milestones:       [],
             tokenRewardSymbol: stats.tokenSymbol as string,
             minContribution:  parseFloat(formatEther(stats.minContribution as bigint)),
+            tags:             tags as string[],
           });
         }
 

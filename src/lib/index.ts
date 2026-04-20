@@ -3,18 +3,8 @@ export const ROUTE_PATHS = {
   CAMPAIGNS: '/campaigns',
   CAMPAIGN_DETAIL: '/campaigns/:id',
   CREATE_CAMPAIGN: '/create',
-  EDIT_CAMPAIGN: '/edit-campaign/:id',
   DASHBOARD: '/dashboard',
   ABOUT: '/about',
-  FAQ: '/faq',
-  NETWORK_STATUS: '/network-status',
-  COOKIE_POLICY: '/cookie-policy',
-  PRIVACY_POLICY: '/privacy-policy',
-  TERMS_OF_SERVICE: '/terms-of-service',
-  // Short aliases used by existing page files
-  TERMS: '/terms-of-service',
-  PRIVACY: '/privacy-policy',
-  COOKIES: '/cookie-policy',
 } as const;
 
 export const CAMPAIGN_STATUS = {
@@ -65,8 +55,6 @@ export interface Campaign {
   milestones: Milestone[];
   tokenRewardSymbol?: string;
   minContribution: number;
-  profitReturnRate?: number;      // % return promised to investors
-  profitReturnDeadline?: string;  // ISO date string (YYYY-MM-DD)
 }
 
 export interface Contribution {

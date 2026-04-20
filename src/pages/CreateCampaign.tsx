@@ -42,13 +42,6 @@ export default function CreateCampaign() {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-      // Embed profit fields as JSON metadata prefix in description
-      // Format: {"r":<rate>,"pd":"<date>"}\n---\n<actual description>
-      const hasProfit = data.profitReturnRate || data.profitReturnDeadline;
-      const encodedDescription = hasProfit
-        ? `${JSON.stringify({ r: Number(data.profitReturnRate) || 0, pd: data.profitReturnDeadline || '' })}\n---\n${data.description}`
-        : data.description;
-
       // Convert ETH string → wei BigInt
       const goalWei = parseEther(data.goalAmount.toString());
       const minWei  = parseEther(data.minContribution.toString());
@@ -60,7 +53,7 @@ export default function CreateCampaign() {
       const tx = await contract.createCampaign(
         data.title,
         slug,
-        encodedDescription,
+        data.description,
         data.shortDescription,
         data.imageUrl,
         data.category,

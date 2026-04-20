@@ -150,8 +150,8 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <StatsCard title="Active Campaigns" value={campaigns.filter(c => c.status === 'active').length.toString() || '--'} />
             <StatsCard title="Total Funded" value={`${campaigns.reduce((s, c) => s + c.raisedAmount, 0).toFixed(1)} ETH`} />
-            <StatsCard title="Total Contributors" value={campaigns.reduce((sum, c) => sum + c.backersCount, 0).toString()} />
-            <StatsCard title="Success Rate" value={campaigns.length > 0 ? `${Math.round((campaigns.filter(c => c.status === 'funded').length / campaigns.length) * 100)}%` : '--'} />
+            <StatsCard title="Total Contributors" value="--" />
+            <StatsCard title="Success Rate" value="--" />
           </div>
         </div>
       </section>

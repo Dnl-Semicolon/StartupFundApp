@@ -52,6 +52,7 @@ import { springPresets } from '@/lib/motion';
  * Validation Schema for Campaign Creation
  */
 const createCampaignSchema = z.object({
+<<<<<<< HEAD
   title: z.string().min(5, "Title must be at least 5 characters").max(60, "Title is too long (max 60 characters)"),
   category: z.enum(['Tech', 'Fintech', 'Healthcare', 'Green Energy', 'AI', 'Web3']),
   shortDescription: z.string().min(20, "Short description must be at least 20 characters").max(160, "Short description is too long (max 160 characters)"),
@@ -76,6 +77,43 @@ const createCampaignSchema = z.object({
   ]).optional(),
   profitReturnDeadline: z.string().optional(),
 });
+=======
+  title:            z.string().min(5, "Title must be at least 5 characters").max(60, "Title too long"),
+  category:         z.enum(['Tech', 'Fintech', 'Healthcare', 'Green Energy', 'AI', 'Web3']),
+  shortDescription: z.string().min(20, "Short description must be at least 20 characters").max(160, "Too long — max 160 characters"),
+  description:      z.string().min(100, "Please provide a detailed description (min 100 chars)"),
+  goalAmount: z.coerce.number()
+    .min(0.001, "Goal must be at least 0.001 ETH")
+    .positive("Goal must be a positive number"),
+  minContribution: z.coerce.number()
+    .min(0.001, "Minimum contribution must be at least 0.001 ETH")
+    .positive("Must be a positive number"),
+  deadline: z.string()
+    .refine(val => {
+      const d = new Date(val);
+      return d > new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
+    }, "Deadline must be at least 1 day from now")
+    .refine(val => {
+      const d = new Date(val);
+      return d <= new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+    }, "Deadline cannot exceed 60 days from now"),
+  imageUrl:    z.string().url("Please provide a valid image URL"),
+  tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
+  profitReturnRate: z.coerce.number()
+    .min(0, "Cannot be negative")
+    .max(100, "Cannot exceed 100%")
+    .int("Must be a whole number (e.g. 10 for 10%)"),
+  profitReturnDeadline: z.string()
+    .refine(val => new Date(val) > new Date(), "Must be in the future"),
+}).refine(data => {
+  if (!data.minContribution || !data.goalAmount) return true;
+  return data.minContribution <= data.goalAmount;
+}, { message: "Min contribution cannot exceed goal amount", path: ["minContribution"] })
+  .refine(data => {
+    if (!data.deadline || !data.profitReturnDeadline) return true;
+    return new Date(data.profitReturnDeadline) > new Date(data.deadline);
+  }, { message: "Profit return deadline must be after the campaign deadline", path: ["profitReturnDeadline"] });
+>>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
 
 type CreateCampaignValues = z.infer<typeof createCampaignSchema>;
 
@@ -84,14 +122,16 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
   const form = useForm<CreateCampaignValues>({
     resolver: zodResolver(createCampaignSchema),
     defaultValues: {
-      title: '',
+      title:            '',
       shortDescription: '',
-      description: '',
-      goalAmount: 1,
-      minContribution: 0.01,
-      imageUrl: '',
-      tokenSymbol: '',
-      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      description:      '',
+      goalAmount:       1,
+      minContribution:  0.001,
+      imageUrl:         '',
+      tokenSymbol:      '',
+      deadline:             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      profitReturnRate:     10,
+      profitReturnDeadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     },
   });
 
@@ -214,13 +254,18 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                         <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                       </div>
                     </FormControl>
+                    <FormDescription className="text-xs">1–60 days from today</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+<<<<<<< HEAD
               {/* ── Profit return fields ── */}
               <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+=======
+              <div className="grid grid-cols-2 gap-4">
+>>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
                 <FormField
                   control={form.control}
                   name="profitReturnRate"
@@ -228,12 +273,18 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                     <FormItem>
                       <FormLabel>Profit Return Rate (%)</FormLabel>
                       <FormControl>
+<<<<<<< HEAD
                         <div className="relative">
                           <Input type="number" step="0.5" min="0" max="100" placeholder="e.g. 15" onKeyDown={e => { if (e.key === '-') e.preventDefault(); }} {...field} />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
                         </div>
                       </FormControl>
                       <FormDescription className="text-[10px]">Expected return % for investors on success</FormDescription>
+=======
+                        <Input type="number" min={0} max={100} step={1} placeholder="e.g. 10" {...field} />
+                      </FormControl>
+                      <FormDescription className="text-xs">0–100%</FormDescription>
+>>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
                       <FormMessage />
                     </FormItem>
                   )}
@@ -245,9 +296,18 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                     <FormItem>
                       <FormLabel>Profit Return Deadline</FormLabel>
                       <FormControl>
+<<<<<<< HEAD
                         <Input type="date" {...field} />
                       </FormControl>
                       <FormDescription className="text-[10px]">When you plan to return investor profits</FormDescription>
+=======
+                        <div className="relative">
+                          <Input type="date" {...field} />
+                          <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-xs">Must be after campaign deadline</FormDescription>
+>>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
                       <FormMessage />
                     </FormItem>
                   )}
@@ -758,6 +818,100 @@ export function FlagCampaignForm({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Edit Campaign Form — only title, descriptions, imageUrl are editable
+ * Goal, deadline, category, tokenSymbol are locked on-chain after creation
+ */
+const editCampaignSchema = z.object({
+  title:            z.string().min(5, 'Title must be at least 5 characters').max(60, 'Title too long'),
+  shortDescription: z.string().min(20, 'Min 20 characters').max(160, 'Max 160 characters'),
+  description:      z.string().min(100, 'Please provide a detailed description (min 100 chars)'),
+  imageUrl:         z.string().url('Please provide a valid image URL'),
+});
+
+type EditCampaignValues = z.infer<typeof editCampaignSchema>;
+
+export function EditCampaignForm({
+  defaultValues,
+  onSubmit,
+  isSubmitting = false,
+}: {
+  defaultValues: EditCampaignValues;
+  onSubmit: (data: EditCampaignValues) => void;
+  isSubmitting?: boolean;
+}) {
+  const form = useForm<EditCampaignValues>({
+    resolver: zodResolver(editCampaignSchema),
+    defaultValues,
+  });
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={springPresets.gentle}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Startup Name</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="imageUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cover Image URL</FormLabel>
+                <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="shortDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Elevator Pitch</FormLabel>
+                <FormControl>
+                  <Textarea className="h-20 resize-none" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Business Plan</FormLabel>
+                <FormControl>
+                  <Textarea className="h-44" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Alert className="bg-amber-500/10 border-amber-500/30">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-xs text-amber-700 dark:text-amber-400">
+              Goal, deadline, category, and token symbol are locked on-chain and cannot be changed.
+            </AlertDescription>
+          </Alert>
+          <Button type="submit" size="lg" disabled={isSubmitting} className="w-full md:w-auto px-12 gap-2">
+            {isSubmitting ? 'Saving to blockchain…' : 'Save Changes'}
+          </Button>
+        </form>
+      </Form>
+    </motion.div>
   );
 }
 

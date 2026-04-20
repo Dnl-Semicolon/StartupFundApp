@@ -56,8 +56,10 @@ export default function CreateCampaign() {
       // Convert date string "YYYY-MM-DD" → Unix timestamp (seconds)
       const deadline = Math.floor(new Date(data.deadline).getTime() / 1000);
 
+      const profitReturnDeadlineTs = Math.floor(new Date(data.profitReturnDeadline).getTime() / 1000);
+
       const contract = await getStartupFund(true);
-      const tx = await contract.createCampaign(
+      const tx = await contract.createCampaign([
         data.title,
         slug,
         encodedDescription,
@@ -66,9 +68,11 @@ export default function CreateCampaign() {
         data.category,
         goalWei,
         minWei,
-        deadline,
+        BigInt(deadline),
         data.tokenSymbol,
-      );
+        BigInt(data.profitReturnRate),
+        BigInt(profitReturnDeadlineTs),
+      ]);
       await tx.wait();
 
       setShowSuccess(true);

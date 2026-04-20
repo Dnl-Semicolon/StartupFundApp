@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SlidersHorizontal, ArrowUpDown, LayoutGrid, Loader2, AlertTriangle } from 'lucide-react';
-import { Campaign, CAMPAIGN_STATUS, ROUTE_PATHS } from '@/lib/index';
+import { Search, SlidersHorizontal, LayoutGrid, Loader2, AlertTriangle } from 'lucide-react';
+import { CAMPAIGN_STATUS, ROUTE_PATHS } from '@/lib/index';
 import { CampaignCard } from '@/components/Cards';
+import { SearchBar } from '@/components/SearchBar';
+import { FeaturedSection } from '@/components/FeaturedSection';
 import { useCampaigns } from '@/hooks/useCampaigns';
-import { Input } from '@/components/ui/input';
+import { useFeatured } from '@/hooks/useFeatured';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -15,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
+import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 const CATEGORIES = ['All', 'Tech', 'Fintech', 'Healthcare', 'Green Energy', 'AI', 'Web3'];
 const SORT_OPTIONS = [
@@ -26,18 +28,21 @@ const SORT_OPTIONS = [
 ];
 
 export default function Campaigns() {
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
   const { campaigns, loading, error, isMockData } = useCampaigns();
+  const featured = useFeatured(campaigns);
 
   const filteredCampaigns = useMemo(() => {
     return campaigns
       .filter((campaign) => {
-        const matchesSearch = campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          campaign.shortDescription.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = selectedCategory === 'All' || campaign.category === selectedCategory;
-        return matchesSearch && matchesCategory;
+        // PENDING campaigns still need community approval; REJECTED are terminal.
+        // Neither belongs in the main browse grid.
+        if (
+          campaign.status === CAMPAIGN_STATUS.PENDING ||
+          campaign.status === CAMPAIGN_STATUS.REJECTED
+        ) return false;
+        return selectedCategory === 'All' || campaign.category === selectedCategory;
       })
       .sort((a, b) => {
         // Always push flagged campaigns to the bottom regardless of sort
@@ -59,7 +64,7 @@ export default function Campaigns() {
             return 0;
         }
       });
-  }, [campaigns, searchQuery, selectedCategory, sortBy]);
+  }, [campaigns, selectedCategory, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,21 +88,16 @@ export default function Campaigns() {
         </div>
       </section>
 
+      {/* Spotlight — top funded, rising fast, top creator, category chips */}
+      {!loading && campaigns.length > 0 && <FeaturedSection featured={featured} />}
+
       {/* Filter Bar */}
       <section className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b border-border py-4">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             {/* Search and Category Tabs */}
             <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto flex-1">
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search campaigns..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-secondary/50 border-none ring-1 ring-border focus-visible:ring-primary"
-                />
-              </div>
+              <SearchBar campaigns={campaigns} className="w-full md:w-96" />
               <Tabs
                 value={selectedCategory}
                 onValueChange={setSelectedCategory}
@@ -217,13 +217,10 @@ export default function Campaigns() {
                 </p>
                 <Button
                   variant="link"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('All');
-                  }}
+                  onClick={() => setSelectedCategory('All')}
                   className="mt-4 text-primary"
                 >
-                  Clear all filters
+                  Clear category filter
                 </Button>
               </motion.div>
             )}

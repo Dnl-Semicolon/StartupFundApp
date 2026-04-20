@@ -39,7 +39,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { isConnected, address, shortAddress, balance, isConnecting, connect, disconnect, isWrongNetwork, switchToGanache, isInitializing } = useWallet();
+  const { isConnected, address, shortAddress, balance, isConnecting, connect, disconnect, isWrongNetwork, isInitializing } = useWallet();
   const { isRegistered, register } = useRegistration();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -213,18 +213,10 @@ export function Layout({ children }: LayoutProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="w-full bg-destructive/95 text-destructive-foreground text-center text-sm py-2.5 px-4 font-medium backdrop-blur-sm flex items-center justify-center gap-3"
+              className="w-full bg-destructive/95 text-destructive-foreground text-center text-sm py-2.5 px-4 font-medium backdrop-blur-sm"
             >
-              <span>
-                Wrong network — MetaMask must be on{' '}
-                <span className="font-bold">Ganache (Chain ID: 1337)</span>
-              </span>
-              <button
-                onClick={switchToGanache}
-                className="rounded bg-white/20 hover:bg-white/30 transition-colors px-3 py-0.5 text-xs font-bold border border-white/30"
-              >
-                Switch Now
-              </button>
+              Wrong network detected — please switch MetaMask to{' '}
+              <span className="font-bold">Ganache (Chain ID: 1337)</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -280,10 +272,10 @@ export function Layout({ children }: LayoutProps) {
             <div>
               <h4 className="font-bold mb-6">Resources</h4>
               <ul className="space-y-4 text-sm text-muted-foreground">
-                <li><Link to={ROUTE_PATHS.ABOUT}          className="hover:text-primary transition-colors">About Us</Link></li>
-                <li><Link to={ROUTE_PATHS.FAQ}            className="hover:text-primary transition-colors">FAQ</Link></li>
-                <li><Link to={ROUTE_PATHS.NETWORK_STATUS} className="hover:text-primary transition-colors">Network Status</Link></li>
-                <li><Link to={ROUTE_PATHS.TERMS_OF_SERVICE} className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link to={ROUTE_PATHS.ABOUT} className="hover:text-primary transition-colors">About Us</Link></li>
+                <li><Link to="#" className="hover:text-primary transition-colors">Whitepaper</Link></li>
+                <li><Link to="#" className="hover:text-primary transition-colors">FAQ</Link></li>
+                <li><Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
 
@@ -307,9 +299,9 @@ export function Layout({ children }: LayoutProps) {
           <div className="border-t border-border mt-16 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
             <p>© 2026 StartupFund Protocol. All rights reserved.</p>
             <div className="flex items-center gap-6">
-              <Link to={ROUTE_PATHS.PRIVACY_POLICY}  className="hover:text-primary transition-colors">Privacy Policy</Link>
-              <Link to={ROUTE_PATHS.COOKIE_POLICY}   className="hover:text-primary transition-colors">Cookie Policy</Link>
-              <Link to={ROUTE_PATHS.NETWORK_STATUS}  className="hover:text-primary transition-colors">Network Status</Link>
+              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-primary transition-colors">Cookie Policy</a>
+              <a href="#" className="hover:text-primary transition-colors">Network Status</a>
             </div>
           </div>
         </div>

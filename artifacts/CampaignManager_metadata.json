@@ -62,19 +62,6 @@
 						"internalType": "uint256",
 						"name": "campaignId",
 						"type": "uint256"
-					}
-				],
-				"name": "CampaignFlagged",
-				"type": "event"
-			},
-			{
-				"anonymous": false,
-				"inputs": [
-					{
-						"indexed": true,
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
 					},
 					{
 						"indexed": false,
@@ -84,19 +71,6 @@
 					}
 				],
 				"name": "CampaignFunded",
-				"type": "event"
-			},
-			{
-				"anonymous": false,
-				"inputs": [
-					{
-						"indexed": true,
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					}
-				],
-				"name": "CampaignUpdated",
 				"type": "event"
 			},
 			{
@@ -199,19 +173,6 @@
 						"type": "uint256"
 					}
 				],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					}
-				],
-				"name": "flagCampaign",
-				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
 			},
@@ -424,39 +385,6 @@
 						"type": "uint256"
 					},
 					{
-						"internalType": "string",
-						"name": "title",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "description",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "shortDescription",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "imageUrl",
-						"type": "string"
-					}
-				],
-				"name": "updateCampaign",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					},
-					{
 						"internalType": "uint256",
 						"name": "amount",
 						"type": "uint256"
@@ -478,19 +406,28 @@
 			"kind": "dev",
 			"methods": {
 				"checkStatus(uint256)": {
-					"details": "Evaluates and updates the campaign status.      - Goal reached → FUNDED      - Deadline passed + goal not met → CANCELLED"
+					"details": "Evaluates and updates the campaign status.      - Goal reached at any time → FUNDED      - Deadline passed + goal not met → CANCELLED      Called by StartupFund after every contribution, withdraw, and refund.      Implements ICampaign.checkStatus()."
 				},
 				"createCampaign(string,string,string,string,string,string,uint256,uint256,uint256,string)": {
-					"details": "Creates a new campaign. Called by StartupFund.createCampaign()."
+					"details": "Creates a new campaign. Called by StartupFund.createCampaign().      Function signature must exactly match StartupFund ABI."
 				},
-				"flagCampaign(uint256)": {
-					"details": "Marks a campaign as FLAGGED by community vote. Called by StartupFund.flagCampaign()."
+				"getCampaign(uint256)": {
+					"details": "Required by ICampaign — returns core campaign fields."
+				},
+				"getCampaignDescription(uint256)": {
+					"details": "Returns the full description. Called by useCampaigns.ts."
+				},
+				"getCampaignMeta(uint256)": {
+					"details": "Returns metadata fields. Called by useCampaigns.ts."
+				},
+				"getCampaignStats(uint256)": {
+					"details": "Returns numeric/status fields. Called by useCampaigns.ts."
+				},
+				"getStatus(uint256)": {
+					"details": "Returns the status as uint8. Called by useCampaigns.ts."
 				},
 				"setAuthorized(address)": {
 					"details": "Called once after StartupFund is deployed."
-				},
-				"updateCampaign(uint256,string,string,string,string)": {
-					"details": "Updates editable campaign fields. Only allowed before any contributor funds.      Called by StartupFund.updateCampaign()."
 				},
 				"updateRaisedAmount(uint256,uint256,bool)": {
 					"details": "Updates the raised amount and backer count. Called by StartupFund.fundCampaign()."
@@ -522,11 +459,11 @@
 	},
 	"sources": {
 		"contracts/CampaignManager.sol": {
-			"keccak256": "0xbdef7a13facd6f642673d17df25fca65c2df3758927ca9b4137140be63322f0b",
+			"keccak256": "0x522f1f2873907952e023dbcb685c9abf7c1176d187434a04c25013d0d937a886",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2b1da52f6cc33fc0fd32b33a65a574011bd58ee005b374ecd92cc5b2976440b2",
-				"dweb:/ipfs/QmZLiaoieNCJK3ntLoizKuWvwPZnRgnEsAm5CJz1KMzYwU"
+				"bzz-raw://bc2b6bdb759509b9349da39d0c2f6fe2b9d09603e22e0796bcf6db71fb759636",
+				"dweb:/ipfs/QmUxUiCPVr5t6z97tQegfkiL474NKpq5fnkrY4vHVTtN9Y"
 			]
 		},
 		"contracts/ICampaign.sol": {

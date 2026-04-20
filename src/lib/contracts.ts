@@ -36,10 +36,10 @@ export const STARTUPFUND_ABI = [
   'function tokenBalanceOf(address wallet) external view returns (uint256)',
   'function flagCount(uint256 campaignId) external view returns (uint256)',
   'function hasFlagged(uint256 campaignId, address wallet) external view returns (bool)',
-  // Events (needed for queryFilter)
-  'event FundingReceived(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
-  'event RefundClaimed(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
-  'event TokensMinted(uint256 indexed campaignId, address indexed contributor, uint256 tokens)',
+  // Events (needed for queryFilter — must match StartupFund.sol exactly)
+  'event Funded(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
+  'event Refunded(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
+  'event RewardMinted(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
   'event CampaignFlagged(uint256 indexed campaignId, address indexed flagger, uint256 totalFlags)',
 ];
 

@@ -4,6 +4,28 @@ import { getCampaignManager } from '@/lib/contracts';
 import { Campaign, CAMPAIGN_STATUS } from '@/lib/index';
 import { mockCampaigns } from '@/data/index';
 
+// Decode profit metadata embedded in description by CreateCampaign page.
+// Format: {"r":<rate>,"pd":"<date>"}\n---\n<actual description>
+function parseDescription(raw: string): {
+  description: string;
+  profitReturnRate?: number;
+  profitReturnDeadline?: string;
+} {
+  const SEP = '\n---\n';
+  const idx = raw.indexOf(SEP);
+  if (idx === -1) return { description: raw };
+  try {
+    const meta = JSON.parse(raw.slice(0, idx));
+    return {
+      description: raw.slice(idx + SEP.length),
+      profitReturnRate: typeof meta.r === 'number' ? meta.r : undefined,
+      profitReturnDeadline: typeof meta.pd === 'string' && meta.pd ? meta.pd : undefined,
+    };
+  } catch {
+    return { description: raw };
+  }
+}
+
 // Maps CampaignManager uint8 status → frontend string
 const STATUS_MAP: Record<number, Campaign['status']> = {
   0: CAMPAIGN_STATUS.ACTIVE,
@@ -63,13 +85,21 @@ export function useCampaigns(): UseCampaignsResult {
             cm.getCampaignDescription(i),
           ]);
 
-          fetched.push({
+          const parsed = parseDescription(desc as string);
+
+          // Apply localStorage edits (saved by EditCampaign page before any contributor)
+          const localEdit = (() => {
+            try { return JSON.parse(localStorage.getItem(`sf_campaign_edit_${i}`) || 'null'); }
+            catch { return null; }
+          })();
+
+          const base: Campaign = {
             id:               i.toString(),
             creatorId:        meta.creator as string,
             creator:          addrToUser(meta.creator as string),
             title:            meta.title as string,
             slug:             meta.slug as string,
-            description:      desc as string,
+            description:      parsed.description,
             shortDescription: meta.shortDescription as string,
             goalAmount:       parseFloat(formatEther(stats.goalAmount as bigint)),
             raisedAmount:     parseFloat(formatEther(stats.raisedAmount as bigint)),
@@ -83,7 +113,15 @@ export function useCampaigns(): UseCampaignsResult {
             milestones:       [],
             tokenRewardSymbol: stats.tokenSymbol as string,
             minContribution:  parseFloat(formatEther(stats.minContribution as bigint)),
-          });
+            profitReturnRate:     parsed.profitReturnRate,
+            profitReturnDeadline: parsed.profitReturnDeadline,
+          };
+
+          // Overlay local edits — only valid while backersCount is still 0
+          fetched.push(localEdit && base.backersCount === 0
+            ? { ...base, ...localEdit }
+            : base
+          );
         }
 
         if (!cancelled) {

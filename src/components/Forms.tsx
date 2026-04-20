@@ -35,6 +35,16 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useWallet } from '@/hooks/useWallet';
 import { springPresets } from '@/lib/motion';
 
@@ -42,17 +52,29 @@ import { springPresets } from '@/lib/motion';
  * Validation Schema for Campaign Creation
  */
 const createCampaignSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters").max(60, "Title too long"),
+  title: z.string().min(5, "Title must be at least 5 characters").max(60, "Title is too long (max 60 characters)"),
   category: z.enum(['Tech', 'Fintech', 'Healthcare', 'Green Energy', 'AI', 'Web3']),
-  shortDescription: z.string().min(20, "Short description must be at least 20 characters").max(160, "Short description too long"),
-  description: z.string().min(100, "Please provide a detailed description (min 100 chars)"),
-  goalAmount: z.coerce.number().positive("Goal must be a positive number"),
-  minContribution: z.coerce.number().positive("Minimum contribution must be positive"),
+  shortDescription: z.string().min(20, "Short description must be at least 20 characters").max(160, "Short description is too long (max 160 characters)"),
+  description: z.string().min(100, "Please provide a detailed description (minimum 100 characters)"),
+  goalAmount: z.coerce.number({
+    invalid_type_error: 'Please enter a valid number for the funding goal.',
+  }).gt(0, "Funding goal must be greater than 0 ETH. Negative or zero values are not allowed."),
+  minContribution: z.coerce.number({
+    invalid_type_error: 'Please enter a valid number for the minimum contribution.',
+  }).gt(0, "Minimum contribution must be greater than 0 ETH. Negative or zero values are not allowed."),
   deadline: z.string().refine((val) => new Date(val) > new Date(), {
-    message: "Deadline must be in the future",
+    message: "Deadline must be a future date.",
   }),
-  imageUrl: z.string().url("Please provide a valid image URL"),
-  tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
+  imageUrl: z.string().url("Please provide a valid image URL (must start with https://)"),
+  tokenSymbol: z.string().min(2, "Token symbol must be at least 2 characters").max(6, "Token symbol must be 6 characters or fewer").regex(/^[A-Z]+$/, "Token symbol must be uppercase letters only (e.g. FUND)"),
+  profitReturnRate: z.union([
+    z.literal(''),
+    z.coerce.number({
+      invalid_type_error: 'Please enter a valid percentage for profit return rate.',
+    }).min(0, "Profit return rate cannot be negative. Please enter a value between 0 and 100.")
+      .max(100, "Profit return rate cannot exceed 100%. Please enter a value between 0 and 100."),
+  ]).optional(),
+  profitReturnDeadline: z.string().optional(),
 });
 
 type CreateCampaignValues = z.infer<typeof createCampaignSchema>;
@@ -141,7 +163,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                     <FormItem>
                       <FormLabel>Funding Goal (ETH)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.1" {...field} />
+                        <Input type="number" step="any" min="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -154,7 +176,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                     <FormItem>
                       <FormLabel>Min. Entry (ETH)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} />
+                        <Input type="number" step="any" min="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,6 +218,41 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                   </FormItem>
                 )}
               />
+
+              {/* ── Profit return fields ── */}
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                <FormField
+                  control={form.control}
+                  name="profitReturnRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profit Return Rate (%)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input type="number" step="0.5" min="0" max="100" placeholder="e.g. 15" onKeyDown={e => { if (e.key === '-') e.preventDefault(); }} {...field} />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-[10px]">Expected return % for investors on success</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="profitReturnDeadline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profit Return Deadline</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormDescription className="text-[10px]">When you plan to return investor profits</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="space-y-6">
@@ -266,16 +323,24 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
 /**
  * Form for Funding a Campaign
  */
-export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string, onSubmit: (amount: number) => Promise<void> }) {
+export function FundCampaignForm({
+  campaignId,
+  onSubmit,
+  alreadyInvested = 0,
+}: {
+  campaignId: string;
+  onSubmit: (amount: number) => Promise<void>;
+  /** Sum of ETH already invested in this campaign by the current wallet. 0 = first time. */
+  alreadyInvested?: number;
+}) {
   const { isConnected, connect, balance } = useWallet();
   const [amount, setAmount] = React.useState<string>('0.1');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [txError, setTxError] = React.useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [pendingAmount, setPendingAmount] = React.useState<number>(0);
 
-  const handleFund = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const numAmount = parseFloat(amount);
-    if (numAmount <= 0) return;
+  const executeSubmit = async (numAmount: number) => {
     setIsSubmitting(true);
     setTxError(null);
     try {
@@ -285,6 +350,49 @@ export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string,
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  /** Returns an error string if the amount is invalid, null if OK */
+  const validateAmount = (val: string): string | null => {
+    if (val.trim() === '')
+      return 'Please enter an ETH amount before submitting.';
+    const n = parseFloat(val);
+    if (isNaN(n) || !isFinite(n))
+      return 'The value you entered is not a valid number. Please enter a positive ETH amount (e.g. 0.1).';
+    if (n < 0 || Object.is(n, -0))
+      return 'Negative values are not allowed. Please enter a positive ETH amount greater than 0.';
+    if (n === 0)
+      return 'Amount must be greater than 0 ETH. Please enter a positive value.';
+    return null;
+  };
+
+  /** Live validation while user types */
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setAmount(val);
+    if (val !== '' && val !== '-') {
+      const err = validateAmount(val);
+      setTxError(err); // show or clear inline error immediately
+    } else {
+      setTxError(null);
+    }
+  };
+
+  const handleFund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const err = validateAmount(amount);
+    if (err) { setTxError(err); return; }
+
+    const numAmount = parseFloat(amount);
+
+    // If user already invested in this campaign, ask for confirmation first
+    if (alreadyInvested > 0) {
+      setPendingAmount(numAmount);
+      setConfirmOpen(true);
+      return;
+    }
+
+    await executeSubmit(numAmount);
   };
 
   return (
@@ -313,10 +421,11 @@ export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string,
               <div className="relative">
                 <Input
                   type="number"
-                  step="0.01"
+                  step="any"
+                  min="0"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="pr-12 text-lg font-mono"
+                  onChange={handleAmountChange}
+                  className={`pr-12 text-lg font-mono ${txError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 font-semibold text-sm opacity-50">ETH</span>
               </div>
@@ -354,12 +463,65 @@ export function FundCampaignForm({ campaignId, onSubmit }: { campaignId: string,
               <ArrowUpRight className="h-4 w-4" />
             </Button>
 
+            {/* Already invested banner */}
+            {alreadyInvested > 0 && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-400/50 bg-amber-50 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  You've already invested <strong>{alreadyInvested.toFixed(4)} ETH</strong> in this campaign. A confirmation will appear before sending another investment.
+                </span>
+              </div>
+            )}
+
             <p className="text-[10px] text-center text-muted-foreground px-4">
               By clicking confirm, you agree to the platform's smart contract terms and understand that crypto investments carry risk.
             </p>
           </form>
         )}
       </CardContent>
+
+      {/* Re-invest confirmation dialog */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-amber-500" />
+              Invest again in this campaign?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>You have already invested in this campaign. Here's a summary before you proceed:</p>
+                <div className="rounded-lg border bg-muted/50 p-3 space-y-1.5 font-mono text-foreground">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Previously invested</span>
+                    <span className="font-semibold">{alreadyInvested.toFixed(4)} ETH</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">New amount</span>
+                    <span className="font-semibold">+ {pendingAmount.toFixed(4)} ETH</span>
+                  </div>
+                  <div className="border-t pt-1.5 flex justify-between text-primary">
+                    <span className="font-medium">Total after this tx</span>
+                    <span className="font-bold">{(alreadyInvested + pendingAmount).toFixed(4)} ETH</span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Multiple investments are allowed. Each one is recorded separately on-chain and all contributions count toward your reward tokens if the campaign succeeds.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => executeSubmit(pendingAmount)}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Yes, invest {pendingAmount.toFixed(4)} ETH
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

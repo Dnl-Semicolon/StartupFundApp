@@ -36,10 +36,20 @@ export function useRegistration() {
     const ac = getReadContract(CONTRACT_ADDRESSES.accessControl, ACCESS_CONTROL_ABI);
     (ac.isRegistered(address) as Promise<boolean>)
       .then(registered => {
-        if (registered) localStorage.setItem(cacheKey(address), 'true');
-        setIsRegistered(registered);
+        if (registered) {
+          localStorage.setItem(cacheKey(address), 'true');
+          setIsRegistered(true);
+        } else {
+          // Chain confirmed not registered — clear stale cache
+          localStorage.removeItem(cacheKey(address));
+          setIsRegistered(false);
+        }
       })
-      .catch(() => { /* Ganache offline — stay false */ })
+      .catch(() => {
+        // Ganache offline or wrong network — fall back to localStorage cache
+        const cached = localStorage.getItem(cacheKey(address)) === 'true';
+        setIsRegistered(cached);
+      })
       .finally(() => setIsLoading(false));
   }, [address, isConnected, isInitializing]);
 
@@ -49,23 +59,48 @@ export function useRegistration() {
     txInFlight = true;
     setIsRegistering(true);
     const toastId = toast.loading(
-      auto ? 'Setting up your account…' : 'Completing account setup…'
+      auto ? 'Setting up your account…' : 'Checking registration…'
     );
     try {
-      const ac = await getWriteContract(CONTRACT_ADDRESSES.accessControl, ACCESS_CONTROL_ABI);
-      const tx = await (ac as any).register();
+      // Always verify on-chain first — wallet may already be registered
+      // (e.g. setup script registered it, or user was on wrong network earlier)
+      const ac = getReadContract(CONTRACT_ADDRESSES.accessControl, ACCESS_CONTROL_ABI);
+      const alreadyRegistered = await (ac.isRegistered(address) as Promise<boolean>);
+
+      if (alreadyRegistered) {
+        // Already registered on-chain — just sync local state, no tx needed
+        localStorage.setItem(cacheKey(address), 'true');
+        setIsRegistered(true);
+        toast.success('Account ready — you can now create and fund campaigns.', { id: toastId });
+        return;
+      }
+
+      // Not yet registered — send the on-chain tx
+      toast.loading('Registering your wallet…', { id: toastId });
+      const acWrite = await getWriteContract(CONTRACT_ADDRESSES.accessControl, ACCESS_CONTROL_ABI);
+      const tx = await (acWrite as any).register();
       await tx.wait();
       localStorage.setItem(cacheKey(address), 'true');
       setIsRegistered(true);
       toast.success('Account ready — you can now create and fund campaigns.', { id: toastId });
     } catch (err: any) {
       const userRejected = err?.code === 4001 || err?.code === 'ACTION_REJECTED';
-      toast.error(
-        userRejected
-          ? 'Setup skipped. Use the "Complete Setup" button when ready.'
-          : 'Setup failed. Check MetaMask and try again.',
-        { id: toastId }
-      );
+      // Handle "already registered" revert gracefully
+      const alreadyRegisteredRevert =
+        typeof err?.message === 'string' && err.message.includes('already registered');
+
+      if (alreadyRegisteredRevert) {
+        localStorage.setItem(cacheKey(address), 'true');
+        setIsRegistered(true);
+        toast.success('Account ready.', { id: toastId });
+      } else {
+        toast.error(
+          userRejected
+            ? 'Setup skipped. Use the "Register" button when ready.'
+            : 'Registration failed — make sure MetaMask is on Ganache (Chain ID 1337) and Ganache is running.',
+          { id: toastId }
+        );
+      }
     } finally {
       txInFlight = false;
       setIsRegistering(false);

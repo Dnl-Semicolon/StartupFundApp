@@ -5,6 +5,7 @@ import { getStartupFund, getReadContract, ensureRegistered, STARTUPFUND_ABI } fr
 import { CONTRACT_ADDRESSES } from '@/lib/contractAddresses';
 import { useWallet } from '@/hooks/useWallet';
 import { useRegistration } from '@/hooks/useRegistration';
+import { useContributorStats } from '@/hooks/useContributorStats';
 import { ConnectPrompt } from '@/components/ConnectPrompt';
 import {
   Clock,
@@ -17,7 +18,8 @@ import {
   ExternalLink,
   TrendingUp,
   Award,
-  Flag
+  Flag,
+  Pencil,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -41,6 +43,7 @@ export default function CampaignDetail() {
   const { address, isConnected } = useWallet();
   const { isRegistered } = useRegistration();
   const { campaigns, loading: campaignsLoading } = useCampaigns();
+  const { transactions } = useContributorStats();
 
   const campaign = useMemo(() => {
     return campaigns.find(c => c.id === id || c.slug === id);
@@ -95,6 +98,15 @@ export default function CampaignDetail() {
     }
   }, [campaign?.id, address]);
 
+  // Sum of ETH the current user has already invested in this specific campaign.
+  // Must be declared before early returns to satisfy Rules of Hooks.
+  const alreadyInvested = useMemo(() => {
+    if (!address || !campaign || !/^\d+$/.test(campaign.id)) return 0;
+    return transactions
+      .filter(tx => tx.type === 'funding' && tx.campaignId === campaign.id)
+      .reduce((sum, tx) => sum + parseFloat(tx.amount.replace(' ETH', '')), 0);
+  }, [transactions, campaign, address]);
+
   if (campaignsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -123,6 +135,9 @@ export default function CampaignDetail() {
   // In demo mode, demoFlagged overrides the campaign status when threshold is hit
   const effectiveStatus = demoFlagged ? CAMPAIGN_STATUS.FLAGGED : campaign.status;
 
+  // Edit button: creator + no backers + still active
+  const canEdit = isCreator && campaign.backersCount === 0 && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
+
   // Sidebar form visibility rules
   const canAct           = isConnected && isRegistered;
   const showFundForm     = canAct && !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && daysLeft > 0;
@@ -132,28 +147,58 @@ export default function CampaignDetail() {
   const showConnectPrompt = !isConnected && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && !isCreator;
   const showCreatorActive = isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
 
+  // true for mock/demo campaigns (c1, c2…) that have no on-chain counterpart
+  const isMockCampaign = !/^\d+$/.test(campaign.id);
+
   const handleFundingSubmit = async (amount: number): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
+    if (isMockCampaign) {
+      // Demo campaign — simulate a 1.5 s delay, no real ETH sent
+      await new Promise(r => setTimeout(r, 1500));
+      return;
+    }
     await ensureRegistered(address);
     const contract = await getStartupFund(true);
     const tx = await contract.fundCampaign(BigInt(campaign.id), {
       value: parseEther(amount.toString()),
     });
-    await tx.wait();
+    const receipt = await tx.wait();
+    // Optimistic update — reflects tx immediately in dashboard stats/transactions
+    window.dispatchEvent(new CustomEvent('sf:tx-funded', {
+      detail: {
+        campaignId: campaign.id,
+        amount: amount.toString(),
+        txHash: receipt?.hash ?? tx.hash,
+        blockNumber: receipt?.blockNumber ?? 0,
+      },
+    }));
+    window.dispatchEvent(new Event('sf:balance-refresh'));
   };
 
   const handleWithdrawSubmit = async (): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
+    if (isMockCampaign) {
+      await new Promise(r => setTimeout(r, 1500));
+      return;
+    }
     const contract = await getStartupFund(true);
     const tx = await contract.withdraw(BigInt(campaign.id));
     await tx.wait();
+    window.dispatchEvent(new Event('sf:balance-refresh'));
   };
 
   const handleRefundSubmit = async (): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
+    if (isMockCampaign) {
+      await new Promise(r => setTimeout(r, 1500));
+      return;
+    }
     const contract = await getStartupFund(true);
     const tx = await contract.claimRefund(BigInt(campaign.id));
-    await tx.wait();
+    const receipt = await tx.wait();
+    window.dispatchEvent(new Event('sf:balance-refresh'));
+    // Delayed chain re-query so Ganache has time to index the Refunded event
+    setTimeout(() => window.dispatchEvent(new Event('sf:stats-refresh')), 2500);
   };
 
   const handleFlagSubmit = async (): Promise<void> => {
@@ -249,14 +294,49 @@ export default function CampaignDetail() {
                 >
                   {effectiveStatus.toUpperCase()}
                 </Badge>
+                {isMockCampaign && (
+                  <Badge className="bg-yellow-400 text-yellow-900 font-bold">
+                    DEMO
+                  </Badge>
+                )}
               </div>
             </div>
 
             <div className="space-y-4">
-              <h1 className="text-4xl font-bold tracking-tight">{campaign.title}</h1>
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="text-4xl font-bold tracking-tight">{campaign.title}</h1>
+                {canEdit && (
+                  <Link
+                    to={ROUTE_PATHS.EDIT_CAMPAIGN.replace(':id', campaign.id)}
+                    className="shrink-0"
+                  >
+                    <button className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 transition-colors">
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit Campaign
+                    </button>
+                  </Link>
+                )}
+              </div>
               <p className="text-xl text-muted-foreground leading-relaxed">
                 {campaign.shortDescription}
               </p>
+              {/* Profit return info */}
+              {(campaign.profitReturnRate || campaign.profitReturnDeadline) && (
+                <div className="flex flex-wrap gap-3">
+                  {campaign.profitReturnRate != null && campaign.profitReturnRate > 0 && (
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-chart-2/40 bg-chart-2/10 px-3 py-1 text-xs font-semibold text-chart-2">
+                      <TrendingUp className="w-3 h-3" />
+                      {campaign.profitReturnRate}% Profit Return
+                    </div>
+                  )}
+                  {campaign.profitReturnDeadline && (
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-muted-foreground/20 bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      Return by {new Date(campaign.profitReturnDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -387,10 +467,18 @@ export default function CampaignDetail() {
 
               {/* ACTIVE + contributor + not creator → Fund form */}
               {showFundForm && (
-                <FundCampaignForm
-                  campaignId={campaign.id}
-                  onSubmit={handleFundingSubmit}
-                />
+                <>
+                  {isMockCampaign && (
+                    <div className="rounded-lg border border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30 px-3 py-2 text-xs text-yellow-800 dark:text-yellow-300">
+                      <strong>Demo campaign</strong> — no real ETH will be deducted. To invest real ETH, use one of the on-chain campaigns on the Discover page.
+                    </div>
+                  )}
+                  <FundCampaignForm
+                    campaignId={campaign.id}
+                    onSubmit={handleFundingSubmit}
+                    alreadyInvested={alreadyInvested}
+                  />
+                </>
               )}
 
               {/* FUNDED + entrepreneur + creator → Withdraw form */}

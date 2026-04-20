@@ -10,8 +10,14 @@ import Home from "@/pages/Home";
 import Campaigns from "@/pages/Campaigns";
 import CampaignDetail from "@/pages/CampaignDetail";
 import CreateCampaign from "@/pages/CreateCampaign";
+import EditCampaign from "@/pages/EditCampaign";
 import Dashboard from "@/pages/Dashboard";
 import About from "@/pages/About";
+import FAQ from "@/pages/FAQ";
+import NetworkStatus from "@/pages/NetworkStatus";
+import CookiePolicy from "@/pages/CookiePolicy";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfServices from "@/pages/TermsOfServices";
 import NotFound from "@/pages/not-found/Index";
 
 const queryClient = new QueryClient({
@@ -43,9 +49,22 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path={ROUTE_PATHS.DASHBOARD} element={<Dashboard />} />
-              <Route path={ROUTE_PATHS.ABOUT}     element={<About />} />
-              <Route path="*"                     element={<NotFound />} />
+              <Route
+                path={ROUTE_PATHS.EDIT_CAMPAIGN}
+                element={
+                  <ProtectedRoute>
+                    <EditCampaign />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path={ROUTE_PATHS.DASHBOARD}       element={<Dashboard />} />
+              <Route path={ROUTE_PATHS.ABOUT}           element={<About />} />
+              <Route path={ROUTE_PATHS.FAQ}             element={<FAQ />} />
+              <Route path={ROUTE_PATHS.NETWORK_STATUS}  element={<NetworkStatus />} />
+              <Route path={ROUTE_PATHS.COOKIE_POLICY}   element={<CookiePolicy />} />
+              <Route path={ROUTE_PATHS.PRIVACY_POLICY}  element={<PrivacyPolicy />} />
+              <Route path={ROUTE_PATHS.TERMS_OF_SERVICE} element={<TermsOfServices />} />
+              <Route path="*"                           element={<NotFound />} />
             </Routes>
           </Layout>
         </BrowserRouter>

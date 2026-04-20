@@ -13,6 +13,8 @@ export const CAMPAIGN_STATUS = {
   EXPIRED: 'expired',
   CANCELLED: 'cancelled',
   FLAGGED: 'flagged',
+  PENDING: 'pending',
+  REJECTED: 'rejected',
 } as const;
 
 export type CampaignStatus = typeof CAMPAIGN_STATUS[keyof typeof CAMPAIGN_STATUS];
@@ -55,6 +57,7 @@ export interface Campaign {
   milestones: Milestone[];
   tokenRewardSymbol?: string;
   minContribution: number;
+  tags?: string[];
 }
 
 export interface Contribution {

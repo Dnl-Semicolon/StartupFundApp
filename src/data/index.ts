@@ -65,6 +65,7 @@ export const mockCampaigns: Campaign[] = [
     backersCount: 124,
     minContribution: 0.1,
     tokenRewardSymbol: "EFLOW",
+    tags: ["renewable", "climate", "solar", "infrastructure", "iot"],
     milestones: [
       { id: "m1", title: "Prototype Development", description: "Complete the Gen-2 IoT node hardware.", targetAmount: 100000, isReached: true },
       { id: "m2", title: "Beta Testing", description: "Launch pilot program in 3 neighborhoods.", targetAmount: 250000, isReached: true },
@@ -90,6 +91,7 @@ export const mockCampaigns: Campaign[] = [
     backersCount: 890,
     minContribution: 0.5,
     tokenRewardSymbol: "NEURAL",
+    tags: ["ai", "neuroscience", "bci", "hardware", "accessibility"],
     milestones: [
       { id: "m1", title: "Signal Isolation", description: "Achieve 99% accuracy in basic command recognition.", targetAmount: 300000, isReached: true },
       { id: "m2", title: "FCC Certification", description: "Obtain safety and regulatory approvals.", targetAmount: 800000, isReached: true },
@@ -115,6 +117,7 @@ export const mockCampaigns: Campaign[] = [
     backersCount: 42,
     minContribution: 1.0,
     tokenRewardSymbol: "SAFE",
+    tags: ["security", "auditing", "defi", "tooling", "custody"],
     milestones: [
       { id: "m1", title: "Security Audit", description: "Pass independent audit by CertiK and OpenZeppelin.", targetAmount: 200000, isReached: false },
       { id: "m2", title: "L2 Integration", description: "Support for major Ethereum Layer 2 networks.", targetAmount: 500000, isReached: false },
@@ -139,10 +142,33 @@ export const mockCampaigns: Campaign[] = [
     backersCount: 312,
     minContribution: 0.05,
     tokenRewardSymbol: "PULSE",
+    tags: ["wearables", "diagnostics", "iot", "health", "ml"],
     milestones: [
       { id: "m1", title: "Sensor Calibration", description: "Fine-tune heart rate variability accuracy.", targetAmount: 100000, isReached: true },
       { id: "m2", title: "App Development", description: "Launch iOS and Android companion apps.", targetAmount: 250000, isReached: true },
     ],
+  },
+  {
+    id: "pending-1",
+    creatorId: "u1",
+    creator: mockUsers[0],
+    title: "QuantumLedger Protocol",
+    slug: "quantumledger-protocol",
+    shortDescription: "Post-quantum cryptographic infrastructure for Ethereum — future-proof your DeFi.",
+    description: "A post-quantum cryptographic layer for Ethereum smart contracts, making DeFi resilient against quantum computing attacks. Built on NIST-standardized lattice-based algorithms (CRYSTALS-Kyber, Dilithium) wrapped in a drop-in Solidity library. Existing contracts can upgrade with a single inheritance change.",
+    goalAmount: 8,
+    raisedAmount: 0,
+    imageUrl: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop&q=60",
+    category: "Web3",
+    status: CAMPAIGN_STATUS.PENDING,
+    deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    backersCount: 0,
+    minContribution: 0.01,
+    tokenRewardSymbol: "QLT",
+    tags: ["cryptography", "quantum", "security", "protocol", "post-quantum"],
+    milestones: [],
   },
 ];
 

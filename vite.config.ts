@@ -211,9 +211,6 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "::",
       port: 8080,
-      headers: {
-        'Content-Security-Policy': "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;",
-      },
       proxy: {
         // Proxy Ganache RPC calls through Vite to avoid CORS errors
         '/ganache-rpc': {

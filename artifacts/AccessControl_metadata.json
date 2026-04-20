@@ -134,25 +134,6 @@
 						"type": "address"
 					}
 				],
-				"name": "isEntrepreneur",
-				"outputs": [
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "wallet",
-						"type": "address"
-					}
-				],
 				"name": "isRegistered",
 				"outputs": [
 					{
@@ -245,9 +226,13 @@
 			}
 		],
 		"devdoc": {
-			"details": "Manages user registration, wallet blocking, and platform pause.      Every registered wallet is automatically both contributor and entrepreneur.",
+			"details": "Manages user registration, wallet blocking, and platform pause.      Implements IVerification interface.",
 			"kind": "dev",
-			"methods": {},
+			"methods": {
+				"register()": {
+					"details": "User registers their wallet with the platform.      Cannot be called by blocked wallets."
+				}
+			},
 			"title": "AccessControl",
 			"version": 1
 		},
@@ -274,19 +259,19 @@
 	},
 	"sources": {
 		"contracts/AccessControl.sol": {
-			"keccak256": "0x7af9a39dff11442d708c58c9e3356d276129155389aaca85583727cdfe989910",
+			"keccak256": "0x540a47ab86229f39dbffd7ee3b2b4ac90efbb12af71bf8df1604c22585a917a2",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://33e192371866f75fafd1911cca1cbfb97530450d8aefc3197ec2e10036f17327",
-				"dweb:/ipfs/QmVbmUJyDjpskCxS514kQFuJRVq6atQHVE7SzxmUeMhXtg"
+				"bzz-raw://5c05ef900975bc6eef207818f4479fd30b9325e835fa107288a1aee67c4caf5c",
+				"dweb:/ipfs/QmfBMzsvZqZTTZeBqiiNAno6QJBi2u8tLTP6wZxdVARCTF"
 			]
 		},
 		"contracts/IVerification.sol": {
-			"keccak256": "0x5a080392593d2ef9861c004b098f6b487cfc9396d931f4144cbfdf53e846a2f0",
+			"keccak256": "0x1ecf4a69d81fdb76149ff8bd678359c49f6570fe8c74fcf49c093ab7480b15a7",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://6499c670cf39547c21e3259cfd5a26ce9b3b2da39395438b633e0d1a508dab93",
-				"dweb:/ipfs/QmcMbUi1kRDsPgrPBkBBcq3tQNWKvyWknnDyPQ49jL89Tc"
+				"bzz-raw://126e5d53d6bb733472115b823907a7602aafd0993ba1779544aac9a823607c9d",
+				"dweb:/ipfs/QmNiTdEjHTQT1y386L6TjNgsDKZNkp8gz1gqzhPNW9hb3p"
 			]
 		}
 	},

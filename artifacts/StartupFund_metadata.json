@@ -62,75 +62,6 @@
 					{
 						"indexed": true,
 						"internalType": "address",
-						"name": "flagger",
-						"type": "address"
-					},
-					{
-						"indexed": false,
-						"internalType": "uint256",
-						"name": "totalFlags",
-						"type": "uint256"
-					}
-				],
-				"name": "CampaignFlagged",
-				"type": "event"
-			},
-			{
-				"anonymous": false,
-				"inputs": [
-					{
-						"indexed": true,
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					},
-					{
-						"indexed": true,
-						"internalType": "address",
-						"name": "unflagged",
-						"type": "address"
-					},
-					{
-						"indexed": false,
-						"internalType": "uint256",
-						"name": "totalFlags",
-						"type": "uint256"
-					}
-				],
-				"name": "CampaignUnflagged",
-				"type": "event"
-			},
-			{
-				"anonymous": false,
-				"inputs": [
-					{
-						"indexed": true,
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					},
-					{
-						"indexed": true,
-						"internalType": "address",
-						"name": "creator",
-						"type": "address"
-					}
-				],
-				"name": "CampaignUpdated",
-				"type": "event"
-			},
-			{
-				"anonymous": false,
-				"inputs": [
-					{
-						"indexed": true,
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					},
-					{
-						"indexed": true,
-						"internalType": "address",
 						"name": "contributor",
 						"type": "address"
 					},
@@ -218,19 +149,6 @@
 				],
 				"name": "Withdrawn",
 				"type": "event"
-			},
-			{
-				"inputs": [],
-				"name": "FLAG_THRESHOLD",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
 			},
 			{
 				"inputs": [],
@@ -343,38 +261,6 @@
 						"type": "uint256"
 					}
 				],
-				"name": "flagCampaign",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"name": "flagCount",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					}
-				],
 				"name": "fundCampaign",
 				"outputs": [],
 				"stateMutability": "payable",
@@ -388,30 +274,6 @@
 						"internalType": "contract IFundingVault",
 						"name": "",
 						"type": "address"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					},
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
-					}
-				],
-				"name": "hasFlagged",
-				"outputs": [
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
 					}
 				],
 				"stateMutability": "view",
@@ -502,52 +364,6 @@
 						"type": "uint256"
 					}
 				],
-				"name": "unflagCampaign",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					},
-					{
-						"internalType": "string",
-						"name": "title",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "description",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "shortDescription",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "imageUrl",
-						"type": "string"
-					}
-				],
-				"name": "updateCampaign",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "uint256",
-						"name": "campaignId",
-						"type": "uint256"
-					}
-				],
 				"name": "withdraw",
 				"outputs": [],
 				"stateMutability": "nonpayable",
@@ -563,25 +379,33 @@
 			"kind": "dev",
 			"methods": {
 				"claimRefund(uint256)": {
-					"details": "Contributor claims a refund after campaign is CANCELLED or FLAGGED."
+					"details": "Contributor claims a refund after campaign is CANCELLED.      - Contributor must have a non-zero contribution."
+				},
+				"constructor": {
+					"params": {
+						"_accessControl": "Address of deployed AccessControl",
+						"_campaignManager": "Address of deployed CampaignManager",
+						"_fundingVault": "Address of deployed FundingVault",
+						"_rewardToken": "Address of deployed RewardToken"
+					}
 				},
 				"createCampaign(string,string,string,string,string,string,uint256,uint256,uint256,string)": {
-					"details": "Creates a new campaign. Only registered, unblocked users."
-				},
-				"flagCampaign(uint256)": {
-					"details": "Community member flags a suspicious campaign."
+					"details": "Creates a new campaign. Only registered, unblocked users.      Signature matches STARTUPFUND_ABI exactly."
 				},
 				"fundCampaign(uint256)": {
-					"details": "Contributes ETH to a campaign."
+					"details": "Contributes ETH to a campaign.      - Campaign must be ACTIVE and before deadline.      - msg.value must be >= minContribution.      - On success, status is re-evaluated (may flip to FUNDED).      - If newly FUNDED, reward tokens are minted immediately."
 				},
-				"unflagCampaign(uint256)": {
-					"details": "Removes the caller's flag from a campaign."
+				"isRegistered(address)": {
+					"details": "Proxies to AccessControl.isRegistered()."
 				},
-				"updateCampaign(uint256,string,string,string,string)": {
-					"details": "Updates editable campaign fields. Only creator, only before first contribution."
+				"tokenBalanceOf(address)": {
+					"details": "Returns the RewardToken balance for a wallet."
+				},
+				"totalCampaigns()": {
+					"details": "Proxies to CampaignManager.campaignCount().      Named totalCampaigns() to match frontend ABI."
 				},
 				"withdraw(uint256)": {
-					"details": "Creator withdraws funds after campaign is FUNDED."
+					"details": "Creator withdraws funds after campaign is FUNDED.      - Only callable once (fundsReleased flag in FundingVault).      - Reward tokens are minted first if not yet done."
 				}
 			},
 			"title": "StartupFund",
@@ -634,19 +458,19 @@
 			]
 		},
 		"contracts/IVerification.sol": {
-			"keccak256": "0x5a080392593d2ef9861c004b098f6b487cfc9396d931f4144cbfdf53e846a2f0",
+			"keccak256": "0x1ecf4a69d81fdb76149ff8bd678359c49f6570fe8c74fcf49c093ab7480b15a7",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://6499c670cf39547c21e3259cfd5a26ce9b3b2da39395438b633e0d1a508dab93",
-				"dweb:/ipfs/QmcMbUi1kRDsPgrPBkBBcq3tQNWKvyWknnDyPQ49jL89Tc"
+				"bzz-raw://126e5d53d6bb733472115b823907a7602aafd0993ba1779544aac9a823607c9d",
+				"dweb:/ipfs/QmNiTdEjHTQT1y386L6TjNgsDKZNkp8gz1gqzhPNW9hb3p"
 			]
 		},
 		"contracts/StartupFund.sol": {
-			"keccak256": "0x759056f6091b4b5f96704a6df0b4ae862feec5bf431e9ec552b89c2e58945f2d",
+			"keccak256": "0x826587fbb889188cdf736f369ea73f3401845f3aab14746e56e71df16793a68d",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2d58105e487d2f569d553e57ed4d4aa82852e70085c88fac1089174a2b26e8ba",
-				"dweb:/ipfs/QmYMQSbXM6MoSsZabEvRZC6qptz6z5xfBUYacvZ1oCrFi5"
+				"bzz-raw://62b2163e95e873646e58236628fe7890f087920348f6f2274fef3b4dabb731d9",
+				"dweb:/ipfs/QmezNS5T2K96SzERKeoCpdYWwjUQQ5HMYvm87nuATaGEBN"
 			]
 		}
 	},

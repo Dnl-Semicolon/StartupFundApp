@@ -23,15 +23,13 @@ contract CampaignManager is ICampaign {
         string  shortDescription;
         string  imageUrl;
         string  category;
-        uint256 goalAmount;           // in wei
-        uint256 raisedAmount;         // in wei
-        uint256 minContribution;      // in wei
-        uint256 deadline;             // Unix timestamp
+        uint256 goalAmount;       // in wei
+        uint256 raisedAmount;     // in wei
+        uint256 minContribution;  // in wei
+        uint256 deadline;         // Unix timestamp
         CampaignStatus status;
         string  tokenSymbol;
         uint256 backersCount;
-        uint256 profitReturnRate;     // 0–100 (percentage)
-        uint256 profitReturnDeadline; // Unix timestamp, must be > deadline
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -49,7 +47,6 @@ contract CampaignManager is ICampaign {
         uint256 goalAmount,
         uint256 deadline
     );
-    event CampaignUpdated(uint256 indexed campaignId);
     event CampaignFunded(uint256 indexed campaignId, uint256 totalRaised);
     event CampaignCancelled(uint256 indexed campaignId);
     event CampaignFlagged(uint256 indexed campaignId);
@@ -82,62 +79,49 @@ contract CampaignManager is ICampaign {
 
     /**
      * @dev Creates a new campaign. Called by StartupFund.createCampaign().
+     *      Function signature must exactly match StartupFund ABI.
      */
-    function createCampaign(CampaignParams calldata p) external override onlyAuthorized returns (uint256 campaignId) {
-        require(p.goalAmount > 0,                              "Campaign: goal must be > 0");
-        require(p.minContribution >= 1e15,                     "Campaign: min contribution >= 0.001 ETH");
-        require(p.minContribution <= p.goalAmount,             "Campaign: min contribution exceeds goal");
-        require(p.deadline > block.timestamp + 1 days,        "Campaign: deadline too soon (min 1 day)");
-        require(p.deadline <= block.timestamp + 60 days,      "Campaign: deadline too far (max 60 days)");
-        require(p.profitReturnRate <= 100,                     "Campaign: profit return rate must be 0-100");
-        require(p.profitReturnDeadline > p.deadline,           "Campaign: profit return deadline must be after campaign deadline");
+    function createCampaign(
+        string memory title,
+        string memory slug,
+        string memory description,
+        string memory shortDescription,
+        string memory imageUrl,
+        string memory category,
+        uint256 goalAmount,
+        uint256 minContribution,
+        uint256 deadline,
+        string memory tokenSymbol
+    ) external override onlyAuthorized returns (uint256 campaignId) {
+        // Validations
+        require(goalAmount > 0,                            "Campaign: goal must be > 0");
+        require(minContribution >= 1e15,                   "Campaign: min contribution >= 0.001 ETH");
+        require(deadline > block.timestamp + 1 days,      "Campaign: deadline too soon (min 1 day)");
+        require(deadline <= block.timestamp + 60 days,    "Campaign: deadline too far (max 60 days)");
 
         campaignId = campaignCount;
 
         campaigns[campaignId] = Campaign({
-            id:                   campaignId,
-            creator:              tx.origin,
-            title:                p.title,
-            slug:                 p.slug,
-            description:          p.description,
-            shortDescription:     p.shortDescription,
-            imageUrl:             p.imageUrl,
-            category:             p.category,
-            goalAmount:           p.goalAmount,
-            raisedAmount:         0,
-            minContribution:      p.minContribution,
-            deadline:             p.deadline,
-            status:               CampaignStatus.ACTIVE,
-            tokenSymbol:          p.tokenSymbol,
-            backersCount:         0,
-            profitReturnRate:     p.profitReturnRate,
-            profitReturnDeadline: p.profitReturnDeadline
+            id:               campaignId,
+            creator:          tx.origin,   // the wallet that signed the tx (via StartupFund)
+            title:            title,
+            slug:             slug,
+            description:      description,
+            shortDescription: shortDescription,
+            imageUrl:         imageUrl,
+            category:         category,
+            goalAmount:       goalAmount,
+            raisedAmount:     0,
+            minContribution:  minContribution,
+            deadline:         deadline,
+            status:           CampaignStatus.ACTIVE,
+            tokenSymbol:      tokenSymbol,
+            backersCount:     0
         });
 
         campaignCount++;
 
-        emit CampaignCreated(campaignId, tx.origin, p.goalAmount, p.deadline);
-    }
-
-    /**
-     * @dev Updates editable campaign fields. Only allowed before any contributor funds.
-     *      Called by StartupFund.updateCampaign().
-     */
-    function updateCampaign(
-        uint256 campaignId,
-        string memory title,
-        string memory description,
-        string memory shortDescription,
-        string memory imageUrl
-    ) external onlyAuthorized {
-        Campaign storage c = campaigns[campaignId];
-        require(c.status == CampaignStatus.ACTIVE,  "Campaign: not active");
-        require(c.backersCount == 0,                "Campaign: cannot edit after funding starts");
-        c.title            = title;
-        c.description      = description;
-        c.shortDescription = shortDescription;
-        c.imageUrl         = imageUrl;
-        emit CampaignUpdated(campaignId);
+        emit CampaignCreated(campaignId, tx.origin, goalAmount, deadline);
     }
 
     /**
@@ -156,6 +140,7 @@ contract CampaignManager is ICampaign {
 
     /**
      * @dev Marks a campaign as FLAGGED by community vote. Called by StartupFund.flagCampaign().
+     *      Only ACTIVE campaigns can be flagged (settled campaigns are left as-is).
      */
     function flagCampaign(uint256 campaignId) external onlyAuthorized {
         Campaign storage c = campaigns[campaignId];
@@ -166,13 +151,15 @@ contract CampaignManager is ICampaign {
 
     /**
      * @dev Evaluates and updates the campaign status.
-     *      - Goal reached → FUNDED
+     *      - Goal reached at any time → FUNDED
      *      - Deadline passed + goal not met → CANCELLED
+     *      Called by StartupFund after every contribution, withdraw, and refund.
+     *      Implements ICampaign.checkStatus().
      */
     function checkStatus(uint256 campaignId) external override onlyAuthorized {
         Campaign storage c = campaigns[campaignId];
 
-        if (c.status != CampaignStatus.ACTIVE) return;
+        if (c.status != CampaignStatus.ACTIVE) return; // already settled
 
         if (c.raisedAmount >= c.goalAmount) {
             c.status = CampaignStatus.FUNDED;
@@ -185,6 +172,9 @@ contract CampaignManager is ICampaign {
 
     // ── Read functions (public) ───────────────────────────────────────────────
 
+    /**
+     * @dev Required by ICampaign — returns core campaign fields.
+     */
     function getCampaign(uint256 campaignId) external view override returns (
         address creator,
         uint256 goalAmount,
@@ -196,6 +186,9 @@ contract CampaignManager is ICampaign {
         return (c.creator, c.goalAmount, c.raisedAmount, c.deadline, uint8(c.status));
     }
 
+    /**
+     * @dev Returns metadata fields. Called by useCampaigns.ts.
+     */
     function getCampaignMeta(uint256 campaignId) external view returns (
         uint256 id,
         address creator,
@@ -209,6 +202,9 @@ contract CampaignManager is ICampaign {
         return (c.id, c.creator, c.title, c.slug, c.shortDescription, c.imageUrl, c.category);
     }
 
+    /**
+     * @dev Returns numeric/status fields. Called by useCampaigns.ts.
+     */
     function getCampaignStats(uint256 campaignId) external view returns (
         uint256 goalAmount,
         uint256 raisedAmount,
@@ -216,9 +212,7 @@ contract CampaignManager is ICampaign {
         uint256 deadline,
         uint8   status,
         string memory tokenSymbol,
-        uint256 backersCount,
-        uint256 profitReturnRate,
-        uint256 profitReturnDeadline
+        uint256 backersCount
     ) {
         Campaign storage c = campaigns[campaignId];
         return (
@@ -228,16 +222,20 @@ contract CampaignManager is ICampaign {
             c.deadline,
             uint8(c.status),
             c.tokenSymbol,
-            c.backersCount,
-            c.profitReturnRate,
-            c.profitReturnDeadline
+            c.backersCount
         );
     }
 
+    /**
+     * @dev Returns the full description. Called by useCampaigns.ts.
+     */
     function getCampaignDescription(uint256 campaignId) external view returns (string memory) {
         return campaigns[campaignId].description;
     }
 
+    /**
+     * @dev Returns the status as uint8. Called by useCampaigns.ts.
+     */
     function getStatus(uint256 campaignId) external view returns (uint8) {
         return uint8(campaigns[campaignId].status);
     }

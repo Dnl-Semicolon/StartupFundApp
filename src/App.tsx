@@ -42,14 +42,6 @@ export default function App() {
               <Route path={ROUTE_PATHS.CAMPAIGNS}       element={<Campaigns />} />
               <Route path={ROUTE_PATHS.CAMPAIGN_DETAIL} element={<CampaignDetail />} />
               <Route
-                path={ROUTE_PATHS.EDIT_CAMPAIGN}
-                element={
-                  <ProtectedRoute>
-                    <EditCampaign />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path={ROUTE_PATHS.CREATE_CAMPAIGN}
                 element={
                   <ProtectedRoute>

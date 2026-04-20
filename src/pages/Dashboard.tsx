@@ -3,10 +3,6 @@ import { Link } from 'react-router-dom';
 import { getStartupFund } from '@/lib/contracts';
 import { motion } from 'framer-motion';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts';
-import {
   LayoutDashboard,
   Rocket,
   History,
@@ -17,7 +13,6 @@ import {
   RefreshCw,
   UserPlus,
   AlertTriangle,
-<<<<<<< HEAD
   ArrowUpRight,
   ArrowDownLeft,
   Info,
@@ -38,12 +33,6 @@ import {
   Legend,
 } from 'recharts';
 import { ROUTE_PATHS, CAMPAIGN_STATUS } from '@/lib/index';
-=======
-  Pencil,
-  BarChart2,
-} from 'lucide-react';
-import { ROUTE_PATHS, CAMPAIGN_STATUS, Campaign } from '@/lib/index';
->>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
 import { CampaignCard, StatsCard } from '@/components/Cards';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useWallet } from '@/hooks/useWallet';
@@ -54,10 +43,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-<<<<<<< HEAD
 import { Separator } from '@/components/ui/separator';
-=======
->>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
 import { Progress } from '@/components/ui/progress';
 
 const fadeInUp = {
@@ -65,38 +51,6 @@ const fadeInUp = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
 };
-
-// ── Analytics helpers ─────────────────────────────────────────────────────────
-
-const STATUS_COLORS: Record<string, string> = {
-  active:    '#6366f1',
-  funded:    '#22c55e',
-  cancelled: '#94a3b8',
-  flagged:   '#ef4444',
-};
-
-function getRisk(campaign: Campaign): 'high' | 'medium' | 'low' | 'settled' {
-  if (campaign.status !== CAMPAIGN_STATUS.ACTIVE) return 'settled';
-  const daysLeft = Math.max(
-    0,
-    (new Date(campaign.deadline).getTime() - Date.now()) / 86_400_000
-  );
-  const pct = campaign.goalAmount > 0
-    ? (campaign.raisedAmount / campaign.goalAmount) * 100
-    : 0;
-  if (daysLeft <= 7  && pct < 50) return 'high';
-  if (daysLeft <= 14 && pct < 70) return 'medium';
-  return 'low';
-}
-
-const RISK_STYLE = {
-  high:    { label: 'High Risk',   cls: 'bg-red-500/10 text-red-600 border-red-300 dark:border-red-800 dark:text-red-400' },
-  medium:  { label: 'Medium Risk', cls: 'bg-amber-500/10 text-amber-600 border-amber-300 dark:border-amber-800 dark:text-amber-400' },
-  low:     { label: 'On Track',    cls: 'bg-green-500/10 text-green-600 border-green-300 dark:border-green-800 dark:text-green-400' },
-  settled: { label: 'Settled',     cls: 'bg-muted/50 text-muted-foreground border-border' },
-};
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const { isConnected, address, balance, shortAddress, connect } = useWallet();
@@ -175,33 +129,7 @@ export default function Dashboard() {
     setTimeout(() => window.dispatchEvent(new Event('sf:stats-refresh')), 2500);
   };
 
-  // ── Analytics data ───────────────────────────────────────────────────────────
-
-  const fundingData = useMemo(() =>
-    myCreatedCampaigns.map(c => ({
-      name: c.title.length > 16 ? c.title.slice(0, 16) + '…' : c.title,
-      funded: Math.round((c.raisedAmount / c.goalAmount) * 100),
-    })),
-    [myCreatedCampaigns]
-  );
-
-  const contributorData = useMemo(() =>
-    myCreatedCampaigns.map(c => ({
-      name: c.title.length > 16 ? c.title.slice(0, 16) + '…' : c.title,
-      contributors: c.backersCount,
-    })),
-    [myCreatedCampaigns]
-  );
-
-  const pieData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    myCreatedCampaigns.forEach(c => {
-      counts[c.status] = (counts[c.status] ?? 0) + 1;
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [myCreatedCampaigns]);
-
-  // ── Not connected ─────────────────────────────────────────────────────────────
+  // ── Not connected ────────────────────────────────────────────────────────────
   if (!isConnected) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
@@ -226,10 +154,7 @@ export default function Dashboard() {
     );
   }
 
-<<<<<<< HEAD
   // ── Not registered ───────────────────────────────────────────────────────────
-=======
->>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
   if (!isRegistered) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
@@ -248,7 +173,12 @@ export default function Dashboard() {
             </p>
             <p className="text-xs text-muted-foreground font-mono bg-muted/50 rounded-lg px-3 py-2">{address}</p>
           </div>
-          <Button onClick={() => register(false)} disabled={isRegistering} size="lg" className="w-full gap-2">
+          <Button
+            onClick={() => register(false)}
+            disabled={isRegistering}
+            size="lg"
+            className="w-full gap-2"
+          >
             <UserPlus className="w-4 h-4" />
             {isRegistering ? 'Confirm in MetaMask…' : 'Register & Continue'}
           </Button>
@@ -257,7 +187,7 @@ export default function Dashboard() {
     );
   }
 
-  // ── Dashboard ─────────────────────────────────────────────────────────────────
+  // ── Dashboard ────────────────────────────────────────────────────────────────
   return (
     <div className="container mx-auto px-4 py-8">
 
@@ -333,7 +263,6 @@ export default function Dashboard() {
 
       {/* ── Tabs ───────────────────────────────────────────────────────────────── */}
       <Tabs defaultValue="overview" className="space-y-8">
-<<<<<<< HEAD
         <TabsList className="grid w-full grid-cols-4 md:w-auto md:inline-flex">
           <TabsTrigger value="overview">
             <LayoutDashboard className="w-4 h-4 mr-1.5" />
@@ -341,19 +270,6 @@ export default function Dashboard() {
           </TabsTrigger>
           <TabsTrigger value="transactions">
             <History className="w-4 h-4 mr-1.5" />
-=======
-        <TabsList className="grid w-full grid-cols-5 md:w-auto md:inline-flex">
-          <TabsTrigger value="overview" className="gap-2">
-            <LayoutDashboard className="w-4 h-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2">
-            <BarChart2 className="w-4 h-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
-            <History className="w-4 h-4" />
->>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
             Transactions
           </TabsTrigger>
           <TabsTrigger value="rewards">
@@ -376,57 +292,10 @@ export default function Dashboard() {
           </TabsTrigger>
         </TabsList>
 
-<<<<<<< HEAD
         {/* ══ OVERVIEW ════════════════════════════════════════════════════════════ */}
         <TabsContent value="overview" className="space-y-8">
 
           {/* Wallet card */}
-=======
-        {/* ── Overview ─────────────────────────────────────────────────────── */}
-        <TabsContent value="overview" className="space-y-10">
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Rocket className="text-primary w-6 h-6" />
-                My Campaigns
-              </h2>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>+ New Campaign</Link>
-              </Button>
-            </div>
-            {myCreatedCampaigns.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myCreatedCampaigns.map(campaign => (
-                  <div key={campaign.id} className="flex flex-col gap-2">
-                    <CampaignCard campaign={campaign} />
-                    {campaign.status === CAMPAIGN_STATUS.ACTIVE && campaign.backersCount === 0 && (
-                      <Button variant="outline" size="sm" className="gap-2 w-full" asChild>
-                        <Link to={`/campaigns/${campaign.id}/edit`}>
-                          <Pencil className="w-3.5 h-3.5" />
-                          Edit Campaign
-                        </Link>
-                      </Button>
-                    )}
-                    {campaign.status === CAMPAIGN_STATUS.ACTIVE && campaign.backersCount > 0 && (
-                      <p className="text-xs text-center text-muted-foreground">
-                        Locked — {campaign.backersCount} contributor{campaign.backersCount > 1 ? 's' : ''} have funded
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Card className="border-dashed flex flex-col items-center justify-center py-12 text-center">
-                <Rocket className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-                <p className="text-muted-foreground mb-2">You haven't launched any campaigns yet.</p>
-                <Button asChild variant="link" className="text-primary">
-                  <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>Create your first campaign</Link>
-                </Button>
-              </Card>
-            )}
-          </section>
-
->>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -675,167 +544,8 @@ export default function Dashboard() {
           </section>
         </TabsContent>
 
-<<<<<<< HEAD
         {/* ══ TRANSACTIONS ════════════════════════════════════════════════════════ */}
         <TabsContent value="transactions">
-=======
-        {/* ── Analytics ────────────────────────────────────────────────────── */}
-        <TabsContent value="analytics" className="space-y-8">
-          {myCreatedCampaigns.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                <BarChart2 className="w-12 h-12 mb-4 opacity-20" />
-                <p className="font-medium mb-1">No analytics yet</p>
-                <p className="text-sm max-w-sm">Create your first campaign to start seeing funding trends and risk indicators.</p>
-                <Button asChild variant="link" className="mt-4 text-primary">
-                  <Link to={ROUTE_PATHS.CREATE_CAMPAIGN}>Launch a campaign</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* Funding Progress */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                    Funding Progress
-                  </CardTitle>
-                  <CardDescription>% of goal reached per campaign</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={Math.max(120, myCreatedCampaigns.length * 52)}>
-                    <BarChart data={fundingData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
-                      <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
-                      <Tooltip formatter={(v: number) => [`${v}%`, 'Funded']} />
-                      <Bar dataKey="funded" fill="#6366f1" radius={[0, 4, 4, 0]} maxBarSize={28}>
-                        {fundingData.map((entry, i) => (
-                          <Cell
-                            key={i}
-                            fill={entry.funded >= 100 ? '#22c55e' : entry.funded >= 50 ? '#6366f1' : '#f59e0b'}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Contributors + Status Distribution */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Contributor Count</CardTitle>
-                    <CardDescription>Unique backers per campaign</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={contributorData} margin={{ left: 0, right: 8, top: 4, bottom: 40 }}>
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" interval={0} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(v: number) => [v, 'Contributors']} />
-                        <Bar dataKey="contributors" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Campaign Status</CardTitle>
-                    <CardDescription>Distribution across all your campaigns</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex items-center justify-center">
-                    {pieData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={200}>
-                        <PieChart>
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
-                            paddingAngle={3}
-                            dataKey="value"
-                            label={({ name, value }) => `${name} (${value})`}
-                            labelLine={false}
-                          >
-                            {pieData.map((entry, i) => (
-                              <Cell key={i} fill={STATUS_COLORS[entry.name] ?? '#94a3b8'} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No data</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Risk Matrix */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    Risk Assessment
-                  </CardTitle>
-                  <CardDescription>
-                    Calculated from funding % vs days remaining — active campaigns only
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {myCreatedCampaigns.map(campaign => {
-                    const risk = getRisk(campaign);
-                    const style = RISK_STYLE[risk];
-                    const daysLeft = Math.max(
-                      0,
-                      Math.ceil((new Date(campaign.deadline).getTime() - Date.now()) / 86_400_000)
-                    );
-                    const pct = campaign.goalAmount > 0
-                      ? Math.round((campaign.raisedAmount / campaign.goalAmount) * 100)
-                      : 0;
-                    return (
-                      <div
-                        key={campaign.id}
-                        className={`rounded-lg border p-4 ${style.cls}`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{campaign.title}</p>
-                            <div className="flex items-center gap-3 mt-1.5 text-xs opacity-80">
-                              <span>{pct}% funded</span>
-                              <span>·</span>
-                              {risk === 'settled'
-                                ? <span className="capitalize">{campaign.status}</span>
-                                : <span>{daysLeft} day{daysLeft !== 1 ? 's' : ''} left</span>
-                              }
-                              <span>·</span>
-                              <span>{campaign.backersCount} backer{campaign.backersCount !== 1 ? 's' : ''}</span>
-                            </div>
-                            {risk !== 'settled' && (
-                              <Progress value={pct} className="mt-2 h-1.5 opacity-60" />
-                            )}
-                          </div>
-                          <Badge variant="outline" className={`shrink-0 text-xs border-current ${style.cls}`}>
-                            {style.label}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-
-        {/* ── Transactions ──────────────────────────────────────────────────── */}
-        <TabsContent value="history" className="space-y-6">
->>>>>>> 24283aa9ea662a5013349c1ef8f3f601dc6db98f
           <Card>
             <CardHeader>
               <CardTitle>Transaction History</CardTitle>

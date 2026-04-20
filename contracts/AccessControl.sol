@@ -6,7 +6,7 @@ import "./IVerification.sol";
 /**
  * @title AccessControl
  * @dev Manages user registration, wallet blocking, and platform pause.
- *      Every registered wallet is automatically both contributor and entrepreneur.
+ *      Implements IVerification interface.
  */
 contract AccessControl is IVerification {
     address public owner;
@@ -42,6 +42,10 @@ contract AccessControl is IVerification {
 
     // ── User self-registration ────────────────────────────────────────────────
 
+    /**
+     * @dev User registers their wallet with the platform.
+     *      Cannot be called by blocked wallets.
+     */
     function register() external override notBlocked notPaused {
         require(!registeredUsers[msg.sender], "AccessControl: already registered");
         registeredUsers[msg.sender] = true;
@@ -49,11 +53,6 @@ contract AccessControl is IVerification {
     }
 
     function isRegistered(address wallet) external view override returns (bool) {
-        return registeredUsers[wallet];
-    }
-
-    // Every registered wallet is automatically an entrepreneur — no separate step
-    function isEntrepreneur(address wallet) external view override returns (bool) {
         return registeredUsers[wallet];
     }
 

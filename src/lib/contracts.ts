@@ -23,8 +23,7 @@ export const ACCESS_CONTROL_ABI = [
 
 export const STARTUPFUND_ABI = [
   // Write
-  'function createCampaign((string title, string slug, string description, string shortDescription, string imageUrl, string category, uint256 goalAmount, uint256 minContribution, uint256 deadline, string tokenSymbol, uint256 profitReturnRate, uint256 profitReturnDeadline) p) external returns (uint256)',
-  'function updateCampaign(uint256 campaignId, string title, string description, string shortDescription, string imageUrl) external',
+  'function createCampaign(string title, string slug, string description, string shortDescription, string imageUrl, string category, uint256 goalAmount, uint256 minContribution, uint256 deadline, string tokenSymbol) external returns (uint256)',
   'function fundCampaign(uint256 campaignId) external payable',
   'function withdraw(uint256 campaignId) external',
   'function claimRefund(uint256 campaignId) external',
@@ -47,7 +46,7 @@ export const STARTUPFUND_ABI = [
 export const CAMPAIGN_MANAGER_ABI = [
   'function campaignCount() external view returns (uint256)',
   'function getCampaignMeta(uint256 campaignId) external view returns (uint256 id, address creator, string title, string slug, string shortDescription, string imageUrl, string category)',
-  'function getCampaignStats(uint256 campaignId) external view returns (uint256 goalAmount, uint256 raisedAmount, uint256 minContribution, uint256 deadline, uint8 status, string tokenSymbol, uint256 backersCount, uint256 profitReturnRate, uint256 profitReturnDeadline)',
+  'function getCampaignStats(uint256 campaignId) external view returns (uint256 goalAmount, uint256 raisedAmount, uint256 minContribution, uint256 deadline, uint8 status, string tokenSymbol, uint256 backersCount)',
   'function getCampaignDescription(uint256 campaignId) external view returns (string)',
   'function getStatus(uint256 campaignId) external view returns (uint8)',
 ];

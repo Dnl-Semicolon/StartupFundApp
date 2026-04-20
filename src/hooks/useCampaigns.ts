@@ -52,6 +52,7 @@ export function useCampaigns(): UseCampaignsResult {
       try {
         const cm    = getCampaignManager();
         const count = Number(await cm.campaignCount());
+        console.log('[useCampaigns] campaignCount =', count);
 
         // If count is 0, still valid — just no campaigns yet
         const fetched: Campaign[] = [];
@@ -81,8 +82,10 @@ export function useCampaigns(): UseCampaignsResult {
             updatedAt:        '',
             backersCount:     Number(stats.backersCount),
             milestones:       [],
-            tokenRewardSymbol: stats.tokenSymbol as string,
-            minContribution:  parseFloat(formatEther(stats.minContribution as bigint)),
+            tokenRewardSymbol:    stats.tokenSymbol as string,
+            minContribution:      parseFloat(formatEther(stats.minContribution as bigint)),
+            profitReturnRate:     Number(stats.profitReturnRate),
+            profitReturnDeadline: new Date(Number(stats.profitReturnDeadline) * 1000).toISOString(),
           });
         }
 

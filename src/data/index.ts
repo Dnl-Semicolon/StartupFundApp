@@ -64,6 +64,8 @@ export const mockCampaigns: Campaign[] = [
     updatedAt: "2026-02-12T12:00:00Z",
     backersCount: 124,
     minContribution: 0.1,
+    profitReturnRate: 15,
+    profitReturnDeadline: "2027-05-15T23:59:59Z",
     tokenRewardSymbol: "EFLOW",
     milestones: [
       { id: "m1", title: "Prototype Development", description: "Complete the Gen-2 IoT node hardware.", targetAmount: 100000, isReached: true },
@@ -89,6 +91,8 @@ export const mockCampaigns: Campaign[] = [
     updatedAt: "2026-02-10T15:30:00Z",
     backersCount: 890,
     minContribution: 0.5,
+    profitReturnRate: 20,
+    profitReturnDeadline: "2027-02-28T23:59:59Z",
     tokenRewardSymbol: "NEURAL",
     milestones: [
       { id: "m1", title: "Signal Isolation", description: "Achieve 99% accuracy in basic command recognition.", targetAmount: 300000, isReached: true },
@@ -114,6 +118,8 @@ export const mockCampaigns: Campaign[] = [
     updatedAt: "2026-02-12T18:00:00Z",
     backersCount: 42,
     minContribution: 1.0,
+    profitReturnRate: 12,
+    profitReturnDeadline: "2027-08-01T23:59:59Z",
     tokenRewardSymbol: "SAFE",
     milestones: [
       { id: "m1", title: "Security Audit", description: "Pass independent audit by CertiK and OpenZeppelin.", targetAmount: 200000, isReached: false },
@@ -138,6 +144,8 @@ export const mockCampaigns: Campaign[] = [
     updatedAt: "2026-02-13T06:00:00Z",
     backersCount: 312,
     minContribution: 0.05,
+    profitReturnRate: 8,
+    profitReturnDeadline: "2027-01-01T23:59:59Z",
     tokenRewardSymbol: "PULSE",
     milestones: [
       { id: "m1", title: "Sensor Calibration", description: "Fine-tune heart rate variability accuracy.", targetAmount: 100000, isReached: true },

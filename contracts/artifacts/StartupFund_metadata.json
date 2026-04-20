@@ -274,54 +274,71 @@
 			{
 				"inputs": [
 					{
-						"internalType": "string",
-						"name": "title",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "slug",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "description",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "shortDescription",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "imageUrl",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "category",
-						"type": "string"
-					},
-					{
-						"internalType": "uint256",
-						"name": "goalAmount",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "minContribution",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "deadline",
-						"type": "uint256"
-					},
-					{
-						"internalType": "string",
-						"name": "tokenSymbol",
-						"type": "string"
+						"components": [
+							{
+								"internalType": "string",
+								"name": "title",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "slug",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "description",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "shortDescription",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "imageUrl",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "category",
+								"type": "string"
+							},
+							{
+								"internalType": "uint256",
+								"name": "goalAmount",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "minContribution",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "deadline",
+								"type": "uint256"
+							},
+							{
+								"internalType": "string",
+								"name": "tokenSymbol",
+								"type": "string"
+							},
+							{
+								"internalType": "uint256",
+								"name": "profitReturnRate",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "profitReturnDeadline",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct ICampaign.CampaignParams",
+						"name": "p",
+						"type": "tuple"
 					}
 				],
 				"name": "createCampaign",
@@ -565,7 +582,7 @@
 				"claimRefund(uint256)": {
 					"details": "Contributor claims a refund after campaign is CANCELLED or FLAGGED."
 				},
-				"createCampaign(string,string,string,string,string,string,uint256,uint256,uint256,string)": {
+				"createCampaign((string,string,string,string,string,string,uint256,uint256,uint256,string,uint256,uint256))": {
 					"details": "Creates a new campaign. Only registered, unblocked users."
 				},
 				"flagCampaign(uint256)": {
@@ -595,29 +612,29 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/StartupFund.sol": "StartupFund"
+			"StartupFund.sol": "StartupFund"
 		},
-		"evmVersion": "prague",
+		"evmVersion": "paris",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
 	},
 	"sources": {
-		"contracts/ICampaign.sol": {
-			"keccak256": "0x7c13c208a056627a0ad6b2150c4272fe206a37304820b8a55b3d5199bff9ce31",
+		"ICampaign.sol": {
+			"keccak256": "0xc33ccc0ac6f90e4a1a072e9f987321b7b1a3373307c11f925639e3779ddb971c",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://e6c948e4a04120c46edbb6c8abb290cb5963342da4038f60a1e3b489c51bcf93",
-				"dweb:/ipfs/QmNLsRR23A14r7iYcjm3DVWhm7VQobnv2Wr3ZLod1KAEzX"
+				"bzz-raw://2bbbf151106b20a6db52746f27458750bc7cad04b72d7710b99fe2cfd6282b09",
+				"dweb:/ipfs/QmRWgBvaPjzBQbJiBS1cx5kJFcU6S7Pbt1mQQYsDUZu6SU"
 			]
 		},
-		"contracts/IFundingVault.sol": {
+		"IFundingVault.sol": {
 			"keccak256": "0x59f0b17eb41696cbe2fb3fd203c440efd6cc59c40f014df0b458a3a3c4d6e719",
 			"license": "MIT",
 			"urls": [
@@ -625,7 +642,7 @@
 				"dweb:/ipfs/QmXc5WJXreJUd6y3DD61DhpU94rmBKUv65oeK4MgNjjnr6"
 			]
 		},
-		"contracts/IRewardToken.sol": {
+		"IRewardToken.sol": {
 			"keccak256": "0x5048fd777c7f490162d4637db207b6e31fe6ef344d73a9752d7ee9e9385abe30",
 			"license": "MIT",
 			"urls": [
@@ -633,7 +650,7 @@
 				"dweb:/ipfs/QmXwfs9SXSueL52QjhfgNZKER8EAwN52f6Q3gDFHch7Tzs"
 			]
 		},
-		"contracts/IVerification.sol": {
+		"IVerification.sol": {
 			"keccak256": "0x5a080392593d2ef9861c004b098f6b487cfc9396d931f4144cbfdf53e846a2f0",
 			"license": "MIT",
 			"urls": [
@@ -641,12 +658,12 @@
 				"dweb:/ipfs/QmcMbUi1kRDsPgrPBkBBcq3tQNWKvyWknnDyPQ49jL89Tc"
 			]
 		},
-		"contracts/StartupFund.sol": {
-			"keccak256": "0x759056f6091b4b5f96704a6df0b4ae862feec5bf431e9ec552b89c2e58945f2d",
+		"StartupFund.sol": {
+			"keccak256": "0xc83a8f1da3b81388bf62b2e4611bbede5a0d3d0a5a159bc148e275083ca1968d",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2d58105e487d2f569d553e57ed4d4aa82852e70085c88fac1089174a2b26e8ba",
-				"dweb:/ipfs/QmYMQSbXM6MoSsZabEvRZC6qptz6z5xfBUYacvZ1oCrFi5"
+				"bzz-raw://b86773164d2788389e3c5bd19d732cca526a2dc741f8c1ff6238308e32bcb442",
+				"dweb:/ipfs/QmdxeYAYGt1DDsLZfTv7v5GvVqjw2gnriiMW1qQ6gcCrSd"
 			]
 		}
 	},

@@ -141,54 +141,71 @@
 			{
 				"inputs": [
 					{
-						"internalType": "string",
-						"name": "title",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "slug",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "description",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "shortDescription",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "imageUrl",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "category",
-						"type": "string"
-					},
-					{
-						"internalType": "uint256",
-						"name": "goalAmount",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "minContribution",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "deadline",
-						"type": "uint256"
-					},
-					{
-						"internalType": "string",
-						"name": "tokenSymbol",
-						"type": "string"
+						"components": [
+							{
+								"internalType": "string",
+								"name": "title",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "slug",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "description",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "shortDescription",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "imageUrl",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "category",
+								"type": "string"
+							},
+							{
+								"internalType": "uint256",
+								"name": "goalAmount",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "minContribution",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "deadline",
+								"type": "uint256"
+							},
+							{
+								"internalType": "string",
+								"name": "tokenSymbol",
+								"type": "string"
+							},
+							{
+								"internalType": "uint256",
+								"name": "profitReturnRate",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "profitReturnDeadline",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct ICampaign.CampaignParams",
+						"name": "p",
+						"type": "tuple"
 					}
 				],
 				"name": "createCampaign",
@@ -366,6 +383,16 @@
 						"internalType": "uint256",
 						"name": "backersCount",
 						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "profitReturnRate",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "profitReturnDeadline",
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
@@ -480,7 +507,7 @@
 				"checkStatus(uint256)": {
 					"details": "Evaluates and updates the campaign status.      - Goal reached → FUNDED      - Deadline passed + goal not met → CANCELLED"
 				},
-				"createCampaign(string,string,string,string,string,string,uint256,uint256,uint256,string)": {
+				"createCampaign((string,string,string,string,string,string,uint256,uint256,uint256,string,uint256,uint256))": {
 					"details": "Creates a new campaign. Called by StartupFund.createCampaign()."
 				},
 				"flagCampaign(uint256)": {
@@ -507,34 +534,34 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/CampaignManager.sol": "CampaignManager"
+			"CampaignManager.sol": "CampaignManager"
 		},
-		"evmVersion": "prague",
+		"evmVersion": "paris",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
 	},
 	"sources": {
-		"contracts/CampaignManager.sol": {
-			"keccak256": "0xbdef7a13facd6f642673d17df25fca65c2df3758927ca9b4137140be63322f0b",
+		"CampaignManager.sol": {
+			"keccak256": "0xe76f0dd4d621f723d868fcb5ac349fd8e5ff383dfbc03b5f73de496e83503664",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2b1da52f6cc33fc0fd32b33a65a574011bd58ee005b374ecd92cc5b2976440b2",
-				"dweb:/ipfs/QmZLiaoieNCJK3ntLoizKuWvwPZnRgnEsAm5CJz1KMzYwU"
+				"bzz-raw://a99b3e4c226394b1a6ab3fabb620dcff83ca2d8cd2170517abadbc6152e472e3",
+				"dweb:/ipfs/QmXJu9QTwxr2VDHkXrqTtmL1A1LR7jvXG9KuNHDxACMBnz"
 			]
 		},
-		"contracts/ICampaign.sol": {
-			"keccak256": "0x7c13c208a056627a0ad6b2150c4272fe206a37304820b8a55b3d5199bff9ce31",
+		"ICampaign.sol": {
+			"keccak256": "0xc33ccc0ac6f90e4a1a072e9f987321b7b1a3373307c11f925639e3779ddb971c",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://e6c948e4a04120c46edbb6c8abb290cb5963342da4038f60a1e3b489c51bcf93",
-				"dweb:/ipfs/QmNLsRR23A14r7iYcjm3DVWhm7VQobnv2Wr3ZLod1KAEzX"
+				"bzz-raw://2bbbf151106b20a6db52746f27458750bc7cad04b72d7710b99fe2cfd6282b09",
+				"dweb:/ipfs/QmRWgBvaPjzBQbJiBS1cx5kJFcU6S7Pbt1mQQYsDUZu6SU"
 			]
 		}
 	},

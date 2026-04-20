@@ -10,6 +10,7 @@ import Home from "@/pages/Home";
 import Campaigns from "@/pages/Campaigns";
 import CampaignDetail from "@/pages/CampaignDetail";
 import CreateCampaign from "@/pages/CreateCampaign";
+import EditCampaign from "@/pages/EditCampaign";
 import Dashboard from "@/pages/Dashboard";
 import About from "@/pages/About";
 import NotFound from "@/pages/not-found/Index";
@@ -35,6 +36,14 @@ export default function App() {
               <Route path={ROUTE_PATHS.HOME}            element={<Home />} />
               <Route path={ROUTE_PATHS.CAMPAIGNS}       element={<Campaigns />} />
               <Route path={ROUTE_PATHS.CAMPAIGN_DETAIL} element={<CampaignDetail />} />
+              <Route
+                path={ROUTE_PATHS.EDIT_CAMPAIGN}
+                element={
+                  <ProtectedRoute>
+                    <EditCampaign />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path={ROUTE_PATHS.CREATE_CAMPAIGN}
                 element={

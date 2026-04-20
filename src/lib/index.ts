@@ -3,6 +3,7 @@ export const ROUTE_PATHS = {
   CAMPAIGNS: '/campaigns',
   CAMPAIGN_DETAIL: '/campaigns/:id',
   CREATE_CAMPAIGN: '/create',
+  EDIT_CAMPAIGN: '/campaigns/:id/edit',
   DASHBOARD: '/dashboard',
   ABOUT: '/about',
 } as const;
@@ -55,6 +56,8 @@ export interface Campaign {
   milestones: Milestone[];
   tokenRewardSymbol?: string;
   minContribution: number;
+  profitReturnRate: number;
+  profitReturnDeadline: string;
 }
 
 export interface Contribution {

@@ -259,21 +259,21 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/AccessControl.sol": "AccessControl"
+			"AccessControl.sol": "AccessControl"
 		},
-		"evmVersion": "prague",
+		"evmVersion": "paris",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
 	},
 	"sources": {
-		"contracts/AccessControl.sol": {
+		"AccessControl.sol": {
 			"keccak256": "0x7af9a39dff11442d708c58c9e3356d276129155389aaca85583727cdfe989910",
 			"license": "MIT",
 			"urls": [
@@ -281,7 +281,7 @@
 				"dweb:/ipfs/QmVbmUJyDjpskCxS514kQFuJRVq6atQHVE7SzxmUeMhXtg"
 			]
 		},
-		"contracts/IVerification.sol": {
+		"IVerification.sol": {
 			"keccak256": "0x5a080392593d2ef9861c004b098f6b487cfc9396d931f4144cbfdf53e846a2f0",
 			"license": "MIT",
 			"urls": [

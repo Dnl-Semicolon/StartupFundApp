@@ -188,6 +188,33 @@ export const useWallet = () => {
   // ── Wrong network warning ────────────────────────────────────
   const isWrongNetwork = state.isConnected && state.chainId !== null && state.chainId !== CHAIN_ID;
 
+  // ── Switch to Ganache automatically ──────────────────────────
+  // Convenience helper: prompts MetaMask to switch to the Ganache chain,
+  // auto-adding it first if the user hasn't added it yet (error 4902).
+  const switchToGanache = useCallback(async () => {
+    if (!window.ethereum) return;
+    const chainIdHex = `0x${CHAIN_ID.toString(16)}`; // 0x539 for 1337
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: chainIdHex }],
+      });
+    } catch (err: unknown) {
+      const e = err as { code?: number };
+      if (e?.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId:        chainIdHex,
+            chainName:      'Ganache Local',
+            nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+            rpcUrls:        ['http://127.0.0.1:7545'],
+          }],
+        });
+      }
+    }
+  }, []);
+
   return {
     ...state,
     connect,
@@ -195,6 +222,7 @@ export const useWallet = () => {
     signTransaction,
     isWrongNetwork,
     isInitializing,
+    switchToGanache,
     shortAddress: state.address
       ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
       : null,

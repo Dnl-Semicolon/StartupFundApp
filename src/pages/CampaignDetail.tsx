@@ -18,7 +18,8 @@ import {
   TrendingUp,
   Award,
   Flag,
-  XCircle
+  XCircle,
+  Pencil
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -36,6 +37,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 export default function CampaignDetail() {
@@ -369,11 +371,25 @@ export default function CampaignDetail() {
           {/* PENDING campaigns replace the whole sidebar with the voting panel.
               No funding/withdraw/refund/flag affordances are valid here. */}
           {campaign.status === CAMPAIGN_STATUS.PENDING && (
-            <div className="sticky top-24">
+            <div className="sticky top-24 space-y-3">
               <VotingPanel
                 campaignId={campaign.id}
                 creatorAddress={campaign.creator.walletAddress}
               />
+              <div className="flex items-center justify-center gap-4 text-muted-foreground px-4 py-3 rounded-lg border border-border/40 bg-card/30 backdrop-blur-sm">
+                <div className="flex items-center gap-1 text-[11px]">
+                  <Target className="w-3 h-3" />
+                  Verified
+                </div>
+                <div className="flex items-center gap-1 text-[11px]">
+                  <Users className="w-3 h-3" />
+                  Community Led
+                </div>
+                <div className="flex items-center gap-1 text-[11px]">
+                  <Clock className="w-3 h-3" />
+                  Active {new Date().getFullYear()}
+                </div>
+              </div>
             </div>
           )}
 
@@ -386,10 +402,24 @@ export default function CampaignDetail() {
                   Campaign Rejected
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   This campaign did not meet the community approval threshold and cannot accept contributions.
                 </p>
+                <div className="flex items-center justify-center gap-4 text-muted-foreground pt-3 border-t border-border/40">
+                  <div className="flex items-center gap-1 text-[11px]">
+                    <Target className="w-3 h-3" />
+                    Verified
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px]">
+                    <Users className="w-3 h-3" />
+                    Community Led
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px]">
+                    <Clock className="w-3 h-3" />
+                    Active {new Date().getFullYear()}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -468,11 +498,19 @@ export default function CampaignDetail() {
 
               {/* ACTIVE + creator → Creator info banner */}
               {showCreatorActive && (
-                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-center space-y-1">
+                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-center space-y-2">
                   <p className="font-semibold text-primary">You created this campaign</p>
                   <p className="text-muted-foreground text-xs">
                     Funding is live. Once the goal is reached by the deadline, you can withdraw from your Dashboard.
                   </p>
+                  {campaign.backersCount === 0 && (
+                    <Button asChild variant="outline" size="sm" className="w-full mt-2">
+                      <Link to={ROUTE_PATHS.EDIT_CAMPAIGN.replace(':id', campaign.id)}>
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                        Edit (before first contribution)
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -536,24 +574,24 @@ export default function CampaignDetail() {
                   All funding, withdrawals, and refunds are executed automatically by audited smart contracts on Ganache. No manual intervention possible.
                 </p>
               </div>
+              {/* Stats footer — travels with the sticky sidebar */}
+              <div className="flex items-center justify-center gap-4 text-muted-foreground pt-4 mt-2 border-t border-border/40">
+                <div className="flex items-center gap-1 text-[11px]">
+                  <Target className="w-3 h-3" />
+                  Verified
+                </div>
+                <div className="flex items-center gap-1 text-[11px]">
+                  <Users className="w-3 h-3" />
+                  Community Led
+                </div>
+                <div className="flex items-center gap-1 text-[11px]">
+                  <Clock className="w-3 h-3" />
+                  Active {new Date().getFullYear()}
+                </div>
+              </div>
             </CardContent>
           </Card>
           )}
-
-          <div className="flex items-center justify-center gap-4 text-muted-foreground">
-            <div className="flex items-center gap-1 text-xs">
-              <Target className="w-3 h-3" />
-              Verified
-            </div>
-            <div className="flex items-center gap-1 text-xs">
-              <Users className="w-3 h-3" />
-              Community Led
-            </div>
-            <div className="flex items-center gap-1 text-xs">
-              <Clock className="w-3 h-3" />
-              Active 2026
-            </div>
-          </div>
         </aside>
       </div>
     </div>

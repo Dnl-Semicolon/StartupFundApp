@@ -35,8 +35,16 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { useWallet } from '@/hooks/useWallet';
 import { springPresets } from '@/lib/motion';
+
+// Contract business rules — enforced client-side so bad input never reaches the chain.
+const MIN_CONTRIBUTION_ETH = 0.001;
+const MIN_DEADLINE_DAYS    = 1;
+const MAX_DEADLINE_DAYS    = 60;
 
 /**
  * Validation Schema for Campaign Creation
@@ -46,14 +54,28 @@ const createCampaignSchema = z.object({
   category: z.enum(['Tech', 'Fintech', 'Healthcare', 'Green Energy', 'AI', 'Web3']),
   shortDescription: z.string().min(20, "Short description must be at least 20 characters").max(160, "Short description too long"),
   description: z.string().min(100, "Please provide a detailed description (min 100 chars)"),
-  goalAmount: z.coerce.number().positive("Goal must be a positive number"),
-  minContribution: z.coerce.number().positive("Minimum contribution must be positive"),
-  deadline: z.string().refine((val) => new Date(val) > new Date(), {
-    message: "Deadline must be in the future",
+  goalAmount: z.coerce.number().positive("Goal must be greater than 0 ETH"),
+  minContribution: z.coerce.number()
+    .positive("Minimum contribution must be greater than 0")
+    .refine(v => v >= MIN_CONTRIBUTION_ETH, {
+      message: `Minimum contribution must be at least ${MIN_CONTRIBUTION_ETH} ETH (contract floor).`,
+    }),
+  deadline: z.string().refine(val => {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return false;
+    const deltaDays = (d.getTime() - Date.now()) / 86_400_000;
+    return deltaDays >= MIN_DEADLINE_DAYS && deltaDays <= MAX_DEADLINE_DAYS;
+  }, {
+    message: `Deadline must be between ${MIN_DEADLINE_DAYS} and ${MAX_DEADLINE_DAYS} days from today.`,
   }),
   imageUrl: z.string().url("Please provide a valid image URL"),
   tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
   tags: z.string().optional(),
+  // Profit-return (optional — teammate scaffolding for future Feature 3)
+  profitReturnRate: z.coerce.number().min(0).max(100).optional()
+    .or(z.literal('').transform(() => undefined)),
+  profitReturnDeadline: z.string().optional()
+    .or(z.literal('').transform(() => undefined)),
 });
 
 type CreateCampaignValues = z.infer<typeof createCampaignSchema>;
@@ -72,6 +94,8 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
       tokenSymbol: '',
       tags: '',
       deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      profitReturnRate: undefined,
+      profitReturnDeadline: '',
     },
   });
 
@@ -96,7 +120,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={springPresets.gentle}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             <div className="space-y-6">
               <FormField
                 control={form.control}
@@ -185,18 +209,49 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
               <FormField
                 control={form.control}
                 name="deadline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Campaign Deadline</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type="date" {...field} />
-                        <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Contract rule: must be 1..60 days from now. Calendar disables the rest.
+                  const minDate = new Date(Date.now() + MIN_DEADLINE_DAYS * 86_400_000);
+                  const maxDate = new Date(Date.now() + MAX_DEADLINE_DAYS * 86_400_000);
+                  const selected = field.value ? new Date(field.value) : undefined;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Campaign Deadline</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start font-normal",
+                                !selected && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {selected
+                                ? selected.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                : "Pick a date"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selected}
+                            onSelect={(d) => field.onChange(d ? d.toISOString().split('T')[0] : '')}
+                            disabled={(d) => d < minDate || d > maxDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        Must be {MIN_DEADLINE_DAYS}–{MAX_DEADLINE_DAYS} days from today. Contract-enforced.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
@@ -213,6 +268,49 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="profitReturnRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Profit Return %
+                        <span className="text-muted-foreground text-xs font-normal ml-1">(optional)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          placeholder="e.g. 15"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="profitReturnDeadline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Return By
+                        <span className="text-muted-foreground text-xs font-normal ml-1">(optional)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="space-y-6">

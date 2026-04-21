@@ -1,10 +1,20 @@
 export const ROUTE_PATHS = {
-  HOME: '/',
-  CAMPAIGNS: '/campaigns',
-  CAMPAIGN_DETAIL: '/campaigns/:id',
-  CREATE_CAMPAIGN: '/create',
-  DASHBOARD: '/dashboard',
-  ABOUT: '/about',
+  HOME:             '/',
+  CAMPAIGNS:        '/campaigns',
+  CAMPAIGN_DETAIL:  '/campaigns/:id',
+  CREATE_CAMPAIGN:  '/create',
+  EDIT_CAMPAIGN:    '/campaigns/:id/edit',
+  DASHBOARD:        '/dashboard',
+  ABOUT:            '/about',
+  FAQ:              '/faq',
+  NETWORK_STATUS:   '/network',
+  COOKIE_POLICY:    '/cookies',
+  PRIVACY_POLICY:   '/privacy',
+  TERMS_OF_SERVICE: '/terms',
+  // Aliases — used by teammate-authored pages internally:
+  COOKIES:          '/cookies',
+  PRIVACY:          '/privacy',
+  TERMS:            '/terms',
 } as const;
 
 export const CAMPAIGN_STATUS = {
@@ -58,6 +68,8 @@ export interface Campaign {
   tokenRewardSymbol?: string;
   minContribution: number;
   tags?: string[];
+  profitReturnRate?: number;       // 0..100 (%). Stored in description JSON tail.
+  profitReturnDeadline?: string;   // ISO date. Stored in description JSON tail.
 }
 
 export interface Contribution {

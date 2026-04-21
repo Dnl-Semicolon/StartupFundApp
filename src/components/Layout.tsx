@@ -306,10 +306,12 @@ export function Layout({ children }: LayoutProps) {
 
           <div className="border-t border-border mt-16 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
             <p>© 2026 StartupFund Protocol. All rights reserved.</p>
-            <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-primary transition-colors">Cookie Policy</a>
-              <a href="#" className="hover:text-primary transition-colors">Network Status</a>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <Link to={ROUTE_PATHS.FAQ}              className="hover:text-primary transition-colors">FAQ</Link>
+              <Link to={ROUTE_PATHS.NETWORK_STATUS}   className="hover:text-primary transition-colors">Network Status</Link>
+              <Link to={ROUTE_PATHS.TERMS_OF_SERVICE} className="hover:text-primary transition-colors">Terms</Link>
+              <Link to={ROUTE_PATHS.PRIVACY_POLICY}   className="hover:text-primary transition-colors">Privacy Policy</Link>
+              <Link to={ROUTE_PATHS.COOKIE_POLICY}    className="hover:text-primary transition-colors">Cookie Policy</Link>
             </div>
           </div>
         </div>

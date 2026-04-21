@@ -54,6 +54,7 @@ export function useVoting(campaignId: string | undefined) {
 
   const fetchStatus = useCallback(async () => {
     if (!campaignId) return;
+    console.debug('[sf:vote] fetchStatus', { campaignId, isDemo });
     setIsLoading(true);
     setError(null);
 
@@ -87,6 +88,9 @@ export function useVoting(campaignId: string | undefined) {
         await (cv as unknown as {
           getVoteStatus: (id: bigint) => Promise<[bigint, bigint, bigint, boolean]>;
         }).getVoteStatus(BigInt(campaignId));
+      console.debug('[sf:vote] status', { campaignId,
+        approves: Number(approves), disapproves: Number(disapproves),
+        windowEnd: Number(windowEnd), isSettled: Boolean(isSettled) });
 
       const approvesNum    = Number(approves);
       const disapprovesNum = Number(disapproves);

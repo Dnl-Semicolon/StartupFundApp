@@ -64,7 +64,11 @@ export function Layout({ children }: LayoutProps) {
   // fires immediately with the default isRegistered=false and pops MetaMask
   // for wallets that are already registered, producing a noisy revert toast.
   useEffect(() => {
+    console.debug('[sf:layout] autoreg eval', {
+      isInitializing, isRegLoading, isConnected, hasAddress: !!address, isRegistered,
+    });
     if (!isInitializing && !isRegLoading && isConnected && address && !isRegistered) {
+      console.debug('[sf:layout] firing auto-register');
       register(true);
     }
   }, [isConnected, address, isRegistered, isInitializing, isRegLoading, register]);

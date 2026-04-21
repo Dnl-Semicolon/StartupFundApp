@@ -54,6 +54,7 @@ export function useCampaigns(): UseCampaignsResult {
       try {
         const cm    = getCampaignManager();
         const count = Number(await cm.campaignCount());
+        console.debug('[sf:campaigns] campaignCount =', count);
 
         // If count is 0, still valid — just no campaigns yet
         const fetched: Campaign[] = [];
@@ -91,11 +92,14 @@ export function useCampaigns(): UseCampaignsResult {
         }
 
         if (!cancelled) {
+          console.debug('[sf:campaigns] loaded', fetched.length, 'campaigns from chain',
+            fetched.map(c => ({ id: c.id, status: c.status, creator: c.creatorId })));
           setCampaigns(fetched);
           setIsMockData(false);
         }
       } catch (err) {
         if (cancelled) return;
+        console.warn('[sf:campaigns] fetch failed — falling back to mock?', err);
 
         // Contract unreachable (not deployed, Ganache not running, wrong network, etc.)
         // Fall back to mock data so the UI stays usable

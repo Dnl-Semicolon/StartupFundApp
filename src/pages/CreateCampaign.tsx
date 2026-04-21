@@ -57,11 +57,27 @@ export default function CreateCampaign() {
           ))
         : [];
 
+      // Profit-return metadata rides along in the description tail so the
+      // contract's on-chain description field carries it without needing a
+      // schema change. useCampaigns.parseDescription peels this off on read.
+      let descriptionWithMeta: string = data.description;
+      const meta: Record<string, unknown> = {};
+      if (data.profitReturnRate !== undefined && data.profitReturnRate !== null && data.profitReturnRate !== '') {
+        const n = Number(data.profitReturnRate);
+        if (!Number.isNaN(n)) meta.profitReturnRate = n;
+      }
+      if (data.profitReturnDeadline) {
+        meta.profitReturnDeadline = data.profitReturnDeadline;
+      }
+      if (Object.keys(meta).length > 0) {
+        descriptionWithMeta = `${data.description}\n\n---meta\n${JSON.stringify(meta)}`;
+      }
+
       const contract = await getStartupFund(true);
       const tx = await contract.createCampaign(
         data.title,
         slug,
-        data.description,
+        descriptionWithMeta,
         data.shortDescription,
         data.imageUrl,
         data.category,
@@ -76,8 +92,36 @@ export default function CreateCampaign() {
       setShowSuccess(true);
       setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Transaction failed';
-      setTxError(msg);
+      const raw = err as {
+        shortMessage?: string; reason?: string;
+        info?: { error?: { message?: string } };
+        data?: { message?: string };
+        message?: string; code?: string | number;
+      };
+      const revertText = String(
+        raw?.shortMessage ?? raw?.reason ?? raw?.info?.error?.message ??
+        raw?.data?.message ?? raw?.message ?? ''
+      );
+
+      const friendly = (() => {
+        if (/Deadline must be at least 1 day/i.test(revertText))
+          return 'Deadline must be at least 1 day in the future.';
+        if (/Deadline cannot exceed 60 days/i.test(revertText))
+          return 'Deadline cannot be more than 60 days out.';
+        if (/Min contribution must be >= 0\.001 ETH/i.test(revertText))
+          return 'Minimum contribution must be at least 0.001 ETH.';
+        if (/Title required/i.test(revertText))
+          return 'Please give your campaign a title.';
+        if (/Goal must be > 0/i.test(revertText))
+          return 'Funding goal must be greater than 0 ETH.';
+        if (/Wallet not registered/i.test(revertText))
+          return 'Your wallet is not yet registered on-chain. Try reconnecting your wallet.';
+        if (raw?.code === 4001 || raw?.code === 'ACTION_REJECTED' || /user rejected|ACTION_REJECTED/i.test(revertText))
+          return 'You rejected the transaction in MetaMask.';
+        return 'Transaction failed. Please check your inputs and try again.';
+      })();
+
+      setTxError(friendly);
     } finally {
       setIsSubmitting(false);
     }

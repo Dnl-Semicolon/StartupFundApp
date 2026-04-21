@@ -66,6 +66,8 @@ export const mockCampaigns: Campaign[] = [
     minContribution: 0.1,
     tokenRewardSymbol: "EFLOW",
     tags: ["renewable", "climate", "solar", "infrastructure", "iot"],
+    profitReturnRate: 12,
+    profitReturnDeadline: "2027-06-01",
     milestones: [
       { id: "m1", title: "Prototype Development", description: "Complete the Gen-2 IoT node hardware.", targetAmount: 100000, isReached: true },
       { id: "m2", title: "Beta Testing", description: "Launch pilot program in 3 neighborhoods.", targetAmount: 250000, isReached: true },
@@ -92,6 +94,8 @@ export const mockCampaigns: Campaign[] = [
     minContribution: 0.5,
     tokenRewardSymbol: "NEURAL",
     tags: ["ai", "neuroscience", "bci", "hardware", "accessibility"],
+    profitReturnRate: 8,
+    profitReturnDeadline: "2027-12-15",
     milestones: [
       { id: "m1", title: "Signal Isolation", description: "Achieve 99% accuracy in basic command recognition.", targetAmount: 300000, isReached: true },
       { id: "m2", title: "FCC Certification", description: "Obtain safety and regulatory approvals.", targetAmount: 800000, isReached: true },

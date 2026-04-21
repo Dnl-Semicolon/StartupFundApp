@@ -14,6 +14,30 @@ const STATUS_MAP: Record<number, Campaign['status']> = {
   4: CAMPAIGN_STATUS.REJECTED,
 };
 
+/** Peels the optional "\n---meta\n{...json}" tail off a description and
+ *  returns the cleaned description plus any structured metadata found. */
+function parseDescription(raw: string): {
+  description: string;
+  profitReturnRate?: number;
+  profitReturnDeadline?: string;
+} {
+  const marker = '\n---meta\n';
+  const idx = raw.lastIndexOf(marker);
+  if (idx === -1) return { description: raw };
+  const body = raw.slice(0, idx);
+  const tail = raw.slice(idx + marker.length).trim();
+  try {
+    const parsed = JSON.parse(tail) as { profitReturnRate?: number; profitReturnDeadline?: string };
+    return {
+      description: body,
+      profitReturnRate:     typeof parsed.profitReturnRate     === 'number' ? parsed.profitReturnRate     : undefined,
+      profitReturnDeadline: typeof parsed.profitReturnDeadline === 'string' ? parsed.profitReturnDeadline : undefined,
+    };
+  } catch {
+    return { description: raw };
+  }
+}
+
 // Builds a minimal User from a wallet address
 function addrToUser(address: string): Campaign['creator'] {
   return {
@@ -67,13 +91,17 @@ export function useCampaigns(): UseCampaignsResult {
             cm.getCampaignTags(i),
           ]);
 
+          const parsedDesc = parseDescription(desc as string);
+
           fetched.push({
             id:               i.toString(),
             creatorId:        meta.creator as string,
             creator:          addrToUser(meta.creator as string),
             title:            meta.title as string,
             slug:             meta.slug as string,
-            description:      desc as string,
+            description:      parsedDesc.description,
+            profitReturnRate: parsedDesc.profitReturnRate,
+            profitReturnDeadline: parsedDesc.profitReturnDeadline,
             shortDescription: meta.shortDescription as string,
             goalAmount:       parseFloat(formatEther(stats.goalAmount as bigint)),
             raisedAmount:     parseFloat(formatEther(stats.raisedAmount as bigint)),

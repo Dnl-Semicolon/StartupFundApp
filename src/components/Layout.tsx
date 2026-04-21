@@ -40,7 +40,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { isConnected, address, shortAddress, balance, isConnecting, connect, disconnect, isWrongNetwork, isInitializing } = useWallet();
-  const { isRegistered, register } = useRegistration();
+  const { isRegistered, register, isLoading: isRegLoading } = useRegistration();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -58,12 +58,16 @@ export function Layout({ children }: LayoutProps) {
     setIsMobileMenuOpen(false);
   }, [location]);
 
-  // Auto-register new wallets silently on first connect
+  // Auto-register new wallets silently on first connect.
+  // Waiting on isRegLoading closes the race window where useRegistration
+  // hasn't finished its async chain check yet — without it, this effect
+  // fires immediately with the default isRegistered=false and pops MetaMask
+  // for wallets that are already registered, producing a noisy revert toast.
   useEffect(() => {
-    if (!isInitializing && isConnected && address && !isRegistered) {
+    if (!isInitializing && !isRegLoading && isConnected && address && !isRegistered) {
       register(true);
     }
-  }, [isConnected, address, isRegistered, isInitializing]);
+  }, [isConnected, address, isRegistered, isInitializing, isRegLoading, register]);
 
   const navLinks = [
     { name: 'Discover', path: ROUTE_PATHS.CAMPAIGNS,       icon: Rocket,     show: true },

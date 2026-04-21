@@ -15,6 +15,8 @@ import { fadeInUp } from '@/lib/motion';
 
 interface VotingPanelProps {
   campaignId: string;
+  /** Creator wallet — if it matches the connected wallet, vote buttons are disabled. */
+  creatorAddress?: string;
 }
 
 /**
@@ -51,8 +53,8 @@ function fmtCountdown(secs: number): string {
   return `${s}s`;
 }
 
-export function VotingPanel({ campaignId }: VotingPanelProps) {
-  const { isConnected }  = useWallet();
+export function VotingPanel({ campaignId, creatorAddress }: VotingPanelProps) {
+  const { isConnected, address }  = useWallet();
   const { isRegistered } = useRegistration();
   const {
     voteStatus, hasVoted, userVote,
@@ -64,7 +66,10 @@ export function VotingPanel({ campaignId }: VotingPanelProps) {
   const remaining  = useCountdown(windowEnd);
   const windowOpen = remaining > 0 && !voteStatus?.isSettled;
   const canSettle  = !windowOpen && !voteStatus?.isSettled && voteStatus !== null;
-  const canVote    = isConnected && isRegistered && windowOpen && !hasVoted && !voteStatus?.isSettled;
+  const isCreator  = !!address && !!creatorAddress &&
+                     address.toLowerCase() === creatorAddress.toLowerCase();
+  const canVote    = isConnected && isRegistered && !isCreator &&
+                     windowOpen && !hasVoted && !voteStatus?.isSettled;
 
   if (isLoading) {
     return (
@@ -175,8 +180,16 @@ export function VotingPanel({ campaignId }: VotingPanelProps) {
             </div>
           )}
 
+          {/* Creator can't vote on own campaign */}
+          {isCreator && windowOpen && !voteStatus?.isSettled && (
+            <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-secondary/50 text-muted-foreground border border-border">
+              <Users className="w-4 h-4 shrink-0" />
+              You created this campaign — you can&apos;t vote on yourself.
+            </div>
+          )}
+
           {/* Vote buttons */}
-          {!hasVoted && windowOpen && (
+          {!hasVoted && windowOpen && !isCreator && (
             canVote ? (
               <div className="flex gap-2">
                 <Button

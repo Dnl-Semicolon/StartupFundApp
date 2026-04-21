@@ -8,7 +8,14 @@ import { toast } from 'sonner';
 // is instantiated in multiple components simultaneously.
 let txInFlight = false;
 
-const cacheKey = (address: string) => `sf_registered_${address.toLowerCase()}`;
+// Scope cache by AccessControl address so a fresh contract redeploy
+// automatically invalidates every wallet's cached registration flag.
+// Old keys `sf_registered_<wallet>` become dead entries — harmless but
+// cleared on first fresh wallet connect to keep localStorage tidy.
+const cacheKey = (address: string) =>
+  `sf_registered_${CONTRACT_ADDRESSES.accessControl.toLowerCase()}_${address.toLowerCase()}`;
+
+const legacyCacheKey = (address: string) => `sf_registered_${address.toLowerCase()}`;
 
 export function useRegistration() {
   const { address, isConnected, isInitializing } = useWallet();
@@ -25,7 +32,11 @@ export function useRegistration() {
       return;
     }
 
-    // localStorage cache hit — skip chain read
+    // One-time legacy-cache cleanup — prevents stale "true" flags from
+    // previous contract deploys from leaking into the new deploy.
+    localStorage.removeItem(legacyCacheKey(address));
+
+    // localStorage cache hit (current contract) — skip chain read
     if (localStorage.getItem(cacheKey(address)) === 'true') {
       setIsRegistered(true);
       setIsLoading(false);
@@ -60,12 +71,22 @@ export function useRegistration() {
       toast.success('Account ready — you can now create and fund campaigns.', { id: toastId });
     } catch (err: any) {
       const userRejected = err?.code === 4001 || err?.code === 'ACTION_REJECTED';
-      toast.error(
-        userRejected
-          ? 'Setup skipped. Use the "Complete Setup" button when ready.'
-          : 'Setup failed. Check MetaMask and try again.',
-        { id: toastId }
-      );
+      // Contract reverts with "Already registered" when the wallet is already
+      // set up on-chain but our localStorage cache was missing. Treat that as
+      // success — no error toast, no noise.
+      const msg = (err?.message || err?.data?.message || err?.reason || '') as string;
+      const alreadyRegistered = /already[\s-]?registered/i.test(msg);
+
+      if (alreadyRegistered) {
+        localStorage.setItem(cacheKey(address), 'true');
+        setIsRegistered(true);
+        toast.dismiss(toastId);
+        // Do not show any toast — this is a silent reconciliation.
+      } else if (userRejected) {
+        toast.error('Setup skipped. Use the "Complete Setup" button when ready.', { id: toastId });
+      } else {
+        toast.error('Setup failed. Check MetaMask and try again.', { id: toastId });
+      }
     } finally {
       txInFlight = false;
       setIsRegistering(false);

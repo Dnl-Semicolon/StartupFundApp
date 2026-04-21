@@ -7,7 +7,9 @@ import {
   ArrowUpRight,
   TrendingUp,
   TrendingDown,
-  Flag
+  Flag,
+  Clock,
+  XCircle
 } from 'lucide-react';
 import { Campaign, CAMPAIGN_STATUS, ROUTE_PATHS } from '@/lib/index';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -23,7 +25,10 @@ interface CampaignCardProps {
 export function CampaignCard({ campaign }: CampaignCardProps) {
   const progress = Math.min(Math.round((campaign.raisedAmount / campaign.goalAmount) * 100), 100);
   const daysLeft = Math.max(0, Math.ceil((new Date(campaign.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-  const isFlagged = campaign.status === CAMPAIGN_STATUS.FLAGGED;
+  const isFlagged  = campaign.status === CAMPAIGN_STATUS.FLAGGED;
+  const isPending  = campaign.status === CAMPAIGN_STATUS.PENDING;
+  const isRejected = campaign.status === CAMPAIGN_STATUS.REJECTED;
+  const isDimmed   = isFlagged || isRejected;
 
   return (
     <motion.div
@@ -32,7 +37,9 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     >
       <Card className={cn(
         "overflow-hidden border-border bg-card/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full",
-        isFlagged && "border-red-300 dark:border-red-800 opacity-80"
+        isFlagged  && "border-red-300 dark:border-red-800 opacity-80",
+        isPending  && "border-amber-500/30 dark:border-amber-500/40",
+        isRejected && "border-red-500/30 dark:border-red-700 opacity-70",
       )}>
         <div className="relative aspect-video overflow-hidden">
           <img
@@ -40,7 +47,8 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             alt={campaign.title}
             className={cn(
               "object-cover w-full h-full transition-transform duration-500 hover:scale-105",
-              isFlagged && "grayscale-[40%]"
+              isDimmed && "grayscale-[40%]",
+              isPending && "saturate-75",
             )}
           />
           <Badge className="absolute top-3 left-3 bg-primary/90 text-primary-foreground backdrop-blur-sm">
@@ -54,6 +62,22 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
               </Badge>
             </div>
           )}
+          {isPending && (
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-amber-500 text-white flex items-center gap-1 shadow-lg">
+                <Clock className="w-3 h-3" />
+                Awaiting Vote
+              </Badge>
+            </div>
+          )}
+          {isRejected && (
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-red-700 text-white flex items-center gap-1 shadow-lg">
+                <XCircle className="w-3 h-3" />
+                Rejected
+              </Badge>
+            </div>
+          )}
         </div>
 
         <CardHeader className="p-5 pb-0">
@@ -61,6 +85,18 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 mb-2">
               <Flag className="w-3 h-3 shrink-0" />
               Suspended by community vote — contributors can claim a full refund.
+            </div>
+          )}
+          {isPending && (
+            <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2 mb-2">
+              <Clock className="w-3 h-3 shrink-0" />
+              Awaiting community approval before it can receive contributions.
+            </div>
+          )}
+          {isRejected && (
+            <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 mb-2">
+              <XCircle className="w-3 h-3 shrink-0" />
+              Declined by community. Cannot accept contributions.
             </div>
           )}
           <div className="flex justify-between items-start mb-2">
@@ -98,10 +134,13 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
           <Button
             asChild
             className="w-full group"
-            variant={isFlagged ? 'destructive' : 'outline'}
+            variant={isFlagged || isRejected ? 'destructive' : 'outline'}
           >
             <Link to={ROUTE_PATHS.CAMPAIGN_DETAIL.replace(':id', campaign.id)}>
-              {isFlagged ? 'View & Claim Refund' : 'View Campaign'}
+              {isFlagged  ? 'View & Claim Refund'
+                : isPending  ? 'View & Track Vote'
+                : isRejected ? 'View Rejection'
+                : 'View Campaign'}
               <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
             </Link>
           </Button>

@@ -370,7 +370,10 @@ export default function CampaignDetail() {
               No funding/withdraw/refund/flag affordances are valid here. */}
           {campaign.status === CAMPAIGN_STATUS.PENDING && (
             <div className="sticky top-24">
-              <VotingPanel campaignId={campaign.id} />
+              <VotingPanel
+                campaignId={campaign.id}
+                creatorAddress={campaign.creator.walletAddress}
+              />
             </div>
           )}
 

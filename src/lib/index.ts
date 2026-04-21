@@ -11,6 +11,10 @@ export const ROUTE_PATHS = {
   COOKIE_POLICY:    '/cookies',
   PRIVACY_POLICY:   '/privacy',
   TERMS_OF_SERVICE: '/terms',
+  // Aliases — used by teammate-authored pages internally:
+  COOKIES:          '/cookies',
+  PRIVACY:          '/privacy',
+  TERMS:            '/terms',
 } as const;
 
 export const CAMPAIGN_STATUS = {

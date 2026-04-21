@@ -18,7 +18,8 @@ import {
   TrendingUp,
   Award,
   Flag,
-  XCircle
+  XCircle,
+  Pencil
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -36,6 +37,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 export default function CampaignDetail() {
@@ -496,11 +498,19 @@ export default function CampaignDetail() {
 
               {/* ACTIVE + creator → Creator info banner */}
               {showCreatorActive && (
-                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-center space-y-1">
+                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-center space-y-2">
                   <p className="font-semibold text-primary">You created this campaign</p>
                   <p className="text-muted-foreground text-xs">
                     Funding is live. Once the goal is reached by the deadline, you can withdraw from your Dashboard.
                   </p>
+                  {campaign.backersCount === 0 && (
+                    <Button asChild variant="outline" size="sm" className="w-full mt-2">
+                      <Link to={ROUTE_PATHS.EDIT_CAMPAIGN.replace(':id', campaign.id)}>
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                        Edit (before first contribution)
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               )}
 

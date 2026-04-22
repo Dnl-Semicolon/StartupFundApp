@@ -256,6 +256,18 @@ export default function CampaignDetail() {
 
   const handleRefundSubmit = async (): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
+
+    // Mock campaigns (non-numeric id) can't hit the real contract. To still
+    // pop MetaMask for the screenshot, send a real self-transfer of 0 ETH —
+    // produces a real Ganache tx, real MetaMask confirm dialog, no balance
+    // movement beyond gas. Real chain campaigns go through claimRefund().
+    const isMock = !/^\d+$/.test(campaign.id);
+    if (isMock) {
+      const { sendDirect } = await import('@/lib/directTransfer');
+      await sendDirect(address, 0);
+      return;
+    }
+
     const contract = await getStartupFund(true);
     const tx = await contract.claimRefund(BigInt(campaign.id));
     await tx.wait();

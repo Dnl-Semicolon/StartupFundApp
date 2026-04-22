@@ -60,6 +60,7 @@ export const CAMPAIGN_MANAGER_ABI = [
 
 export const FUNDING_VAULT_ABI = [
   'function getContribution(uint256 campaignId, address contributor) external view returns (uint256)',
+  'function getContributors(uint256 campaignId) external view returns (address[])',
   'function refundClaimed(uint256 campaignId, address contributor) external view returns (bool)',
   'function vaultBalance(uint256 campaignId) external view returns (uint256)',
   'function fundsReleased(uint256 campaignId) external view returns (bool)',

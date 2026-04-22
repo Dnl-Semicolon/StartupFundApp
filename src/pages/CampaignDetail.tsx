@@ -32,6 +32,8 @@ import { Loader2 } from 'lucide-react';
 import { StatsCard } from '@/components/Cards';
 import { FundCampaignForm, WithdrawForm, RefundRequestForm, FlagCampaignForm } from '@/components/Forms';
 import { VotingPanel } from '@/components/VotingPanel';
+import { DisburseProfitsForm } from '@/components/DisburseProfitsForm';
+import { getOverride } from '@/lib/demoState';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -454,12 +456,25 @@ export default function CampaignDetail() {
                 />
               )}
 
-              {/* FUNDED + entrepreneur + creator → Withdraw form */}
-              {showWithdrawForm && (
-                <WithdrawForm
-                  campaignId={campaign.id}
-                  onSubmit={handleWithdrawSubmit}
-                />
+              {/* FUNDED + creator → Withdraw OR Disburse (depending on demo overlay) */}
+              {showWithdrawForm && !getOverride(campaign.id)?.disbursedAt && (
+                <>
+                  <WithdrawForm
+                    campaignId={campaign.id}
+                    onSubmit={handleWithdrawSubmit}
+                  />
+                  <div className="pt-4 mt-4 border-t border-border/40">
+                    <DisburseProfitsForm campaign={campaign} />
+                  </div>
+                </>
+              )}
+              {showWithdrawForm && getOverride(campaign.id)?.disbursedAt && (
+                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm text-center space-y-1">
+                  <p className="font-semibold text-emerald-400">Profits Disbursed</p>
+                  <p className="text-muted-foreground text-xs">
+                    Contributors have received their payouts via direct transfer.
+                  </p>
+                </div>
               )}
 
               {/* CANCELLED + contributor + not creator → Refund form */}

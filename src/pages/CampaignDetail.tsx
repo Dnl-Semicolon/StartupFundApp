@@ -659,7 +659,7 @@ export default function CampaignDetail() {
                   Smart Contract Enforced
                 </div>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  All funding, withdrawals, and refunds are executed automatically by audited smart contracts on Ganache. No manual intervention possible.
+                  All funding, withdrawals, and refunds are executed automatically by audited smart contracts on-chain. No manual intervention possible.
                 </p>
               </div>
               {/* Stats footer — travels with the sticky sidebar */}

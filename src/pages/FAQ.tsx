@@ -31,7 +31,7 @@ const sections: { title: string; items: FAQItem[] }[] = [
       {
         question: 'Is StartupFund free to use?',
         answer:
-          'The platform itself charges no fees. You only pay standard Ethereum gas fees for on-chain transactions (creating campaigns, contributing, withdrawing, claiming refunds). On Ganache these are negligible.',
+          'The platform itself charges no fees. You only pay standard Ethereum gas fees for on-chain transactions (creating campaigns, contributing, withdrawing, claiming refunds). On a development testnet these are negligible.',
       },
     ],
   },

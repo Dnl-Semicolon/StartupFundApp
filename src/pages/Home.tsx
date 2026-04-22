@@ -172,7 +172,7 @@ export default function Home() {
               </h2>
               <p className="text-muted-foreground text-lg max-w-2xl">
                 {isMockData
-                  ? 'Contracts not yet deployed — showing sample campaigns. Deploy to Ganache to see live data.'
+                  ? 'Contracts not yet deployed — showing sample campaigns. Deploy to see live data.'
                   : 'Hand-picked startups that are redefining industries with blockchain technology.'}
               </p>
             </div>

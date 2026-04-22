@@ -224,7 +224,7 @@ export function Layout({ children }: LayoutProps) {
               className="w-full bg-destructive/95 text-destructive-foreground text-center text-sm py-2.5 px-4 font-medium backdrop-blur-sm"
             >
               Wrong network detected — please switch MetaMask to{' '}
-              <span className="font-bold">Ganache (Chain ID: 1337)</span>
+              <span className="font-bold">Chain ID: 1337</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -284,7 +284,7 @@ export function Layout({ children }: LayoutProps) {
               >
                 <div className="flex items-center gap-3 mb-3">
                   <ShieldCheck className="w-5 h-5 text-chart-2" />
-                  <span className="text-sm font-semibold">Deployed on Ganache</span>
+                  <span className="text-sm font-semibold">On-Chain</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Live addresses for every platform contract. Click to inspect.

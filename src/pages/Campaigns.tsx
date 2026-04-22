@@ -153,7 +153,7 @@ export default function Campaigns() {
             <div className="container mx-auto flex items-center gap-3 text-sm text-amber-700 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>
-                <span className="font-semibold">Demo mode</span> — Smart contracts not detected on Ganache.
+                <span className="font-semibold">Demo mode</span> — Smart contracts not reachable.
                 Deploy your contracts in Remix IDE and update{' '}
                 <code className="font-mono text-xs bg-amber-500/20 px-1.5 py-0.5 rounded">
                   src/lib/contractAddresses.ts

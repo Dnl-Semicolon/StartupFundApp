@@ -92,10 +92,11 @@ export default function Campaigns() {
       {/* Filter Bar */}
       <section className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b border-border py-4">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            {/* Search and Category Tabs */}
-            <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto flex-1">
-              <SearchBar campaigns={campaigns} className="w-full md:w-96" />
+          <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
+            {/* Search first, full-width on its own row up to xl */}
+            <SearchBar campaigns={campaigns} className="w-full xl:flex-1 xl:min-w-[420px]" />
+            {/* Category Tabs */}
+            <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto">
               <Tabs
                 value={selectedCategory}
                 onValueChange={setSelectedCategory}

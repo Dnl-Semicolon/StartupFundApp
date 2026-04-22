@@ -134,10 +134,18 @@ export function useCampaigns(): UseCampaignsResult {
         }
 
         if (!cancelled) {
-          const overlaid = fetched.map(applyOverlay);
-          console.debug('[sf:campaigns] loaded', overlaid.length, 'campaigns from chain (overlay applied)',
-            overlaid.map(c => ({ id: c.id, status: c.status, creator: c.creatorId })));
-          setCampaigns(overlaid);
+          const overlaidChain = fetched.map(applyOverlay);
+          // Always merge demo-seeded mock campaigns on top of chain data —
+          // they cover UI states the chain alone can't show (CANCELLED,
+          // REJECTED, overdue-disbursement, diverse contributor lists) and
+          // give the Discover page rich content for screenshots. Chain IDs
+          // are numeric strings; mock IDs are non-numeric, so no collision.
+          const mocksWithOverlay = mockCampaigns.map(applyOverlay);
+          const merged = [...overlaidChain, ...mocksWithOverlay];
+          console.debug('[sf:campaigns] merged',
+            overlaidChain.length, 'chain +', mocksWithOverlay.length, 'mock campaigns',
+            merged.map(c => ({ id: c.id, status: c.status })));
+          setCampaigns(merged);
           setIsMockData(false);
         }
       } catch (err) {

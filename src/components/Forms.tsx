@@ -595,6 +595,10 @@ export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: 
           <Button onClick={connect} variant="outline" className="w-full">
             Connect Wallet to Claim Refund
           </Button>
+        ) : contributionAmount <= 0 ? (
+          <Button disabled className="w-full" variant="outline">
+            You did not contribute to this campaign
+          </Button>
         ) : (
           <Button
             onClick={handleRefund}

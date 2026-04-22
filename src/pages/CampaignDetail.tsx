@@ -44,6 +44,33 @@ import { Button } from '@/components/ui/button';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RefundFormWithContribution
+// Wraps RefundRequestForm, resolving the connected wallet's contribution
+// amount from useContributors so the Claim Refund button correctly disables
+// when the viewer has zero stake in the cancelled campaign.
+// ─────────────────────────────────────────────────────────────────────────────
+function RefundFormWithContribution({
+  campaign, connectedAddress, onSubmit,
+}: {
+  campaign: Campaign;
+  connectedAddress: string | null;
+  onSubmit: () => Promise<void>;
+}) {
+  const { contributors } = useContributors(campaign);
+  const myAddr = connectedAddress?.toLowerCase();
+  const contribution = myAddr
+    ? contributors.find(c => c.address.toLowerCase() === myAddr)?.amount ?? 0
+    : 0;
+  return (
+    <RefundRequestForm
+      campaignId={campaign.id}
+      contributionAmount={contribution}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // OverdueReclaimBanner
 // Surfaced to contributors when a FUNDED campaign has blown past its
 // profitReturnDeadline without the creator running Disburse. Records a reclaim
@@ -542,9 +569,9 @@ export default function CampaignDetail() {
 
               {/* CANCELLED + contributor + not creator → Refund form */}
               {showRefundForm && (
-                <RefundRequestForm
-                  campaignId={campaign.id}
-                  contributionAmount={0}
+                <RefundFormWithContribution
+                  campaign={campaign}
+                  connectedAddress={address}
                   onSubmit={handleRefundSubmit}
                 />
               )}

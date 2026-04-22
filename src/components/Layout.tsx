@@ -11,7 +11,6 @@ import {
   Info,
   ShieldCheck
 } from 'lucide-react';
-import { SiX, SiLinkedin, SiGithub } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROUTE_PATHS } from '@/lib';
 import { useWallet } from '@/hooks/useWallet';
@@ -255,17 +254,6 @@ export function Layout({ children }: LayoutProps) {
               <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                 Empowering the next generation of entrepreneurs through decentralized crowdfunding and blockchain transparency.
               </p>
-              <div className="flex items-center gap-4">
-                <a href="#" className="p-2 rounded-full bg-accent hover:bg-primary hover:text-primary-foreground transition-all">
-                  <SiX className="w-4 h-4" />
-                </a>
-                <a href="#" className="p-2 rounded-full bg-accent hover:bg-primary hover:text-primary-foreground transition-all">
-                  <SiLinkedin className="w-4 h-4" />
-                </a>
-                <a href="#" className="p-2 rounded-full bg-accent hover:bg-primary hover:text-primary-foreground transition-all">
-                  <SiGithub className="w-4 h-4" />
-                </a>
-              </div>
             </div>
 
             <div>

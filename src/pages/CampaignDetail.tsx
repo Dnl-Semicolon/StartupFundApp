@@ -634,21 +634,17 @@ export default function CampaignDetail() {
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10 ring-2 ring-background">
                     <AvatarImage src={campaign.creator.avatar} />
-                    <AvatarFallback>{campaign.creator.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="font-mono text-xs">
+                      {campaign.creator.walletAddress.slice(2, 4).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">Project by</p>
-                    <p className="text-sm font-semibold">{campaign.creator.name}</p>
+                    <p className="text-sm font-semibold font-mono truncate">
+                      {campaign.creator.walletAddress.slice(0, 6)}…{campaign.creator.walletAddress.slice(-4)}
+                    </p>
                   </div>
-                  <Link to={`/user/${campaign.creatorId}`} className="text-muted-foreground hover:text-primary">
-                    <ExternalLink className="w-4 h-4" />
-                  </Link>
                 </div>
-                {campaign.creator.bio && (
-                  <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
-                    {campaign.creator.bio}
-                  </p>
-                )}
               </div>
 
               {/* Smart contract trust badge */}

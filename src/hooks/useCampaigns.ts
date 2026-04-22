@@ -3,6 +3,7 @@ import { formatEther } from 'ethers';
 import { getCampaignManager } from '@/lib/contracts';
 import { Campaign, CAMPAIGN_STATUS } from '@/lib/index';
 import { mockCampaigns } from '@/data/index';
+import { loadDemoState } from '@/lib/demoState';
 
 // Maps CampaignManager uint8 status → frontend string.
 // After the voting-gate redeploy: 0=PENDING, 1=ACTIVE, 2=FUNDED, 3=CANCELLED, 4=REJECTED.
@@ -36,6 +37,19 @@ function parseDescription(raw: string): {
   } catch {
     return { description: raw };
   }
+}
+
+/** Merge a demoState override on top of a chain-derived Campaign.
+ *  Overlay wins: statusOverride (voting skip, disbursement, refund reclaim),
+ *  deadlineOverride (Option Y sub-1-day hijack). */
+function applyOverlay(campaign: Campaign): Campaign {
+  const ov = loadDemoState().overrides[campaign.id];
+  if (!ov) return campaign;
+  return {
+    ...campaign,
+    status:   ov.statusOverride   ?? campaign.status,
+    deadline: ov.deadlineOverride ?? campaign.deadline,
+  };
 }
 
 // Builds a minimal User from a wallet address
@@ -120,9 +134,10 @@ export function useCampaigns(): UseCampaignsResult {
         }
 
         if (!cancelled) {
-          console.debug('[sf:campaigns] loaded', fetched.length, 'campaigns from chain',
-            fetched.map(c => ({ id: c.id, status: c.status, creator: c.creatorId })));
-          setCampaigns(fetched);
+          const overlaid = fetched.map(applyOverlay);
+          console.debug('[sf:campaigns] loaded', overlaid.length, 'campaigns from chain (overlay applied)',
+            overlaid.map(c => ({ id: c.id, status: c.status, creator: c.creatorId })));
+          setCampaigns(overlaid);
           setIsMockData(false);
         }
       } catch (err) {
@@ -144,12 +159,13 @@ export function useCampaigns(): UseCampaignsResult {
            err.message.includes('ECONNREFUSED'));
 
         if (isContractError) {
-          // Apply any demo-mode flag overrides stored in localStorage
-          const withOverrides = mockCampaigns.map(c =>
-            localStorage.getItem(`sf_demo_flagged_${c.id}`) === 'true'
+          // Mock-data fallback still respects demo-state overlays
+          const withOverrides = mockCampaigns.map(c => {
+            const withFlag = localStorage.getItem(`sf_demo_flagged_${c.id}`) === 'true'
               ? { ...c, status: CAMPAIGN_STATUS.FLAGGED as Campaign['status'] }
-              : c
-          );
+              : c;
+            return applyOverlay(withFlag);
+          });
           setCampaigns(withOverrides);
           setIsMockData(true);
           setError(null); // don't show error — mock data handles it gracefully

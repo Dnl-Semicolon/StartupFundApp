@@ -58,9 +58,18 @@ function RefundFormWithContribution({
 }) {
   const { contributors } = useContributors(campaign);
   const myAddr = connectedAddress?.toLowerCase();
-  const contribution = myAddr
+  let contribution = myAddr
     ? contributors.find(c => c.address.toLowerCase() === myAddr)?.amount ?? 0
     : 0;
+
+  // Demo hardcode: c6 (Relic) is the canonical "cancelled campaign with active
+  // refund" screenshot target. Always surface a non-zero contribution for the
+  // connected wallet so the Claim Refund active state renders without needing
+  // the viewer to import a Hardhat test account or patch contributors[].
+  if (campaign.id === 'c6' && myAddr && contribution === 0) {
+    contribution = 0.75;
+  }
+
   return (
     <RefundRequestForm
       campaignId={campaign.id}

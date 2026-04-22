@@ -39,7 +39,6 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
@@ -632,12 +631,18 @@ export default function CampaignDetail() {
               {/* Creator info — always shown */}
               <div className="pt-4 border-t border-border">
                 <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10 ring-2 ring-background">
-                    <AvatarImage src={campaign.creator.avatar} />
-                    <AvatarFallback className="font-mono text-xs">
-                      {campaign.creator.walletAddress.slice(2, 4).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div
+                    className="w-10 h-10 rounded-full ring-2 ring-background flex items-center justify-center font-mono text-xs font-semibold"
+                    style={{
+                      // Deterministic color derived from the wallet address — stable per wallet.
+                      background: `linear-gradient(135deg, #${campaign.creator.walletAddress.slice(2, 8)}, #${campaign.creator.walletAddress.slice(-6)})`,
+                      color: '#fff',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                    }}
+                    aria-hidden
+                  >
+                    {campaign.creator.walletAddress.slice(2, 4).toUpperCase()}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">Project by</p>
                     <p className="text-sm font-semibold font-mono truncate">

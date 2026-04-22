@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Activity, RefreshCw, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { JsonRpcProvider } from 'ethers';
 import { CONTRACT_ADDRESSES, CHAIN_ID } from '@/lib/contractAddresses';

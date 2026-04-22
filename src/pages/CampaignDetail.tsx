@@ -42,7 +42,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
+import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // OverdueReclaimBanner

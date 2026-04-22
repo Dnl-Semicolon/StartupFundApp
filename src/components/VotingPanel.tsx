@@ -12,6 +12,9 @@ import { useVoting } from '@/hooks/useVoting';
 import { useWallet } from '@/hooks/useWallet';
 import { useRegistration } from '@/hooks/useRegistration';
 import { fadeInUp } from '@/lib/motion';
+import { markVotingSkipped } from '@/lib/demoState';
+import { toast } from 'sonner';
+import { FastForward } from 'lucide-react';
 
 interface VotingPanelProps {
   campaignId: string;
@@ -236,6 +239,23 @@ export function VotingPanel({ campaignId, creatorAddress }: VotingPanelProps) {
                 ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Finalizing…</>
                 : <><Sparkles className="w-4 h-4 mr-2" /> Finalize Vote — Activate or Reject</>
               }
+            </Button>
+          )}
+
+          {/* Demo fast-forward — skip voting entirely (dev-only escape hatch) */}
+          {!voteStatus?.isSettled && (
+            <Button
+              onClick={() => {
+                markVotingSkipped(campaignId);
+                toast.success('Voting skipped. Campaign activated locally.');
+                setTimeout(() => window.location.reload(), 600);
+              }}
+              variant="ghost"
+              size="sm"
+              className="w-full text-[11px] text-muted-foreground hover:text-primary"
+            >
+              <FastForward className="w-3 h-3 mr-1" />
+              Skip voting (demo fast-forward)
             </Button>
           )}
         </CardContent>

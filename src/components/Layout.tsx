@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROUTE_PATHS } from '@/lib';
+import { CONTRACT_ADDRESSES } from '@/lib/contractAddresses';
 import { useWallet } from '@/hooks/useWallet';
 import { useRegistration } from '@/hooks/useRegistration';
 import { Button } from '@/components/ui/button';
@@ -259,36 +260,39 @@ export function Layout({ children }: LayoutProps) {
             <div>
               <h4 className="font-bold mb-6">Platform</h4>
               <ul className="space-y-4 text-sm text-muted-foreground">
-                <li><Link to={ROUTE_PATHS.CAMPAIGNS} className="hover:text-primary transition-colors">Browse Projects</Link></li>
-                <li><Link to={ROUTE_PATHS.CREATE_CAMPAIGN} className="hover:text-primary transition-colors">Launch a Campaign</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">Success Stories</Link></li>
+                <li><Link to={ROUTE_PATHS.CAMPAIGNS}        className="hover:text-primary transition-colors">Browse Projects</Link></li>
+                <li><Link to={ROUTE_PATHS.CREATE_CAMPAIGN}  className="hover:text-primary transition-colors">Launch a Campaign</Link></li>
+                <li><Link to={ROUTE_PATHS.DASHBOARD}        className="hover:text-primary transition-colors">Your Dashboard</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-bold mb-6">Resources</h4>
               <ul className="space-y-4 text-sm text-muted-foreground">
-                <li><Link to={ROUTE_PATHS.ABOUT} className="hover:text-primary transition-colors">About Us</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">Whitepaper</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">FAQ</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link to={ROUTE_PATHS.ABOUT}            className="hover:text-primary transition-colors">About Us</Link></li>
+                <li><Link to={ROUTE_PATHS.FAQ}              className="hover:text-primary transition-colors">FAQ</Link></li>
+                <li><Link to={ROUTE_PATHS.TERMS_OF_SERVICE} className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link to={ROUTE_PATHS.NETWORK_STATUS}   className="hover:text-primary transition-colors">Network Status</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-bold mb-6">Security</h4>
-              <div className="bg-card border border-border rounded-xl p-4">
+              <h4 className="font-bold mb-6">On-Chain</h4>
+              <Link
+                to={ROUTE_PATHS.NETWORK_STATUS}
+                className="block bg-card border border-border rounded-xl p-4 hover:border-primary/40 transition-colors"
+              >
                 <div className="flex items-center gap-3 mb-3">
                   <ShieldCheck className="w-5 h-5 text-chart-2" />
-                  <span className="text-sm font-semibold">Audit Verified</span>
+                  <span className="text-sm font-semibold">Deployed on Ganache</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Our smart contracts are audited for maximum security of your funds and reward tokens.
+                  Live addresses for every platform contract. Click to inspect.
                 </p>
                 <Badge variant="secondary" className="mt-4 w-full justify-center py-1 text-[10px] font-mono">
-                  CONTRACT: 0x89...342F
+                  StartupFund: {CONTRACT_ADDRESSES.startupFund.slice(0, 8)}…{CONTRACT_ADDRESSES.startupFund.slice(-6)}
                 </Badge>
-              </div>
+              </Link>
             </div>
           </div>
 

@@ -33,7 +33,9 @@ import { StatsCard } from '@/components/Cards';
 import { FundCampaignForm, WithdrawForm, RefundRequestForm, FlagCampaignForm } from '@/components/Forms';
 import { VotingPanel } from '@/components/VotingPanel';
 import { DisburseProfitsForm } from '@/components/DisburseProfitsForm';
-import { getOverride } from '@/lib/demoState';
+import { getOverride, recordReclaim } from '@/lib/demoState';
+import { useContributors } from '@/hooks/useContributors';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -41,6 +43,68 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { springPresets, fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OverdueReclaimBanner
+// Surfaced to contributors when a FUNDED campaign has blown past its
+// profitReturnDeadline without the creator running Disburse. Records a reclaim
+// intent in demoState for the creator to honour (demo-only, no ETH moves here).
+// ─────────────────────────────────────────────────────────────────────────────
+function OverdueReclaimBanner({
+  campaign, isCreator, connectedAddress,
+}: {
+  campaign: Campaign;
+  isCreator: boolean;
+  connectedAddress: string | null;
+}) {
+  const { contributors } = useContributors(campaign);
+  const over = getOverride(campaign.id);
+  const isFunded   = campaign.status === CAMPAIGN_STATUS.FUNDED;
+  const isDisbursed = !!over?.disbursedAt;
+  const deadlineISO = campaign.profitReturnDeadline;
+  const overdue = !!deadlineISO && new Date(deadlineISO).getTime() < Date.now();
+  const myAddr = connectedAddress?.toLowerCase();
+  const myEntry = myAddr
+    ? contributors.find(c => c.address.toLowerCase() === myAddr)
+    : undefined;
+  const alreadyReclaimed = myAddr
+    ? !!(over?.reclaimed && over.reclaimed[myAddr] !== undefined)
+    : false;
+
+  if (!isFunded || isDisbursed || !overdue || isCreator || !myEntry) return null;
+
+  return (
+    <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4 space-y-2">
+      <p className="font-semibold text-red-400 text-sm flex items-center gap-1.5">
+        <XCircle className="w-4 h-4" /> Disbursement Overdue
+      </p>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Creator promised payout by{' '}
+        <span className="font-medium text-foreground">
+          {deadlineISO ? new Date(deadlineISO).toLocaleDateString() : ''}
+        </span>
+        . You may request to reclaim your original {myEntry.amount.toFixed(4)} ETH contribution.
+      </p>
+      {alreadyReclaimed ? (
+        <Badge variant="outline" className="border-amber-500/40 text-amber-400">
+          Reclaim requested
+        </Badge>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10"
+          onClick={() => {
+            recordReclaim(campaign.id, myAddr!, myEntry.amount);
+            toast.success('Reclaim request recorded. Creator will be notified.');
+          }}
+        >
+          Request Reclaim of {myEntry.amount.toFixed(4)} ETH
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
@@ -485,6 +549,14 @@ export default function CampaignDetail() {
                   onSubmit={handleRefundSubmit}
                 />
               )}
+
+              {/* FUNDED + past profit-return deadline + not disbursed →
+                  contributors may reclaim their original. */}
+              <OverdueReclaimBanner
+                campaign={campaign}
+                isCreator={isCreator}
+                connectedAddress={address}
+              />
 
               {/* ACTIVE + registered non-creator → Flag form */}
               {showFlagButton && (

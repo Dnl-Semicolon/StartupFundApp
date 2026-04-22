@@ -41,9 +41,11 @@ import { cn } from '@/lib/utils';
 import { useWallet } from '@/hooks/useWallet';
 import { springPresets } from '@/lib/motion';
 
-// Contract business rules — enforced client-side so bad input never reaches the chain.
+// Contract business rules — MIN_CONTRIBUTION enforced on chain. Deadline is
+// Option-Y hijacked: user may pick ANY future datetime; if less than 1 day out,
+// CreateCampaign bumps the on-chain deadline to 1d+1min (contract's floor) and
+// stashes the user's real deadline in demoState.deadlineOverride for UI display.
 const MIN_CONTRIBUTION_ETH = 0.001;
-const MIN_DEADLINE_DAYS    = 1;
 const MAX_DEADLINE_DAYS    = 60;
 
 /**
@@ -64,9 +66,11 @@ const createCampaignSchema = z.object({
     const d = new Date(val);
     if (isNaN(d.getTime())) return false;
     const deltaDays = (d.getTime() - Date.now()) / 86_400_000;
-    return deltaDays >= MIN_DEADLINE_DAYS && deltaDays <= MAX_DEADLINE_DAYS;
+    // Accept anything strictly in the future and within 60 days. Sub-1-day
+    // picks are hijacked by CreateCampaign; contract never sees them as-is.
+    return d.getTime() > Date.now() && deltaDays <= MAX_DEADLINE_DAYS;
   }, {
-    message: `Deadline must be between ${MIN_DEADLINE_DAYS} and ${MAX_DEADLINE_DAYS} days from today.`,
+    message: `Deadline must be in the future, within ${MAX_DEADLINE_DAYS} days.`,
   }),
   imageUrl: z.string().url("Please provide a valid image URL"),
   tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
@@ -210,43 +214,29 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                 control={form.control}
                 name="deadline"
                 render={({ field }) => {
-                  // Contract rule: must be 1..60 days from now. Calendar disables the rest.
-                  const minDate = new Date(Date.now() + MIN_DEADLINE_DAYS * 86_400_000);
-                  const maxDate = new Date(Date.now() + MAX_DEADLINE_DAYS * 86_400_000);
-                  const selected = field.value ? new Date(field.value) : undefined;
+                  // ISO datetime-local string "YYYY-MM-DDTHH:mm". Max cap: 60 days ahead.
+                  const toLocalInput = (d: Date) => {
+                    const pad = (n: number) => n.toString().padStart(2, '0');
+                    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                  };
+                  const nowMin = toLocalInput(new Date(Date.now() + 60_000));
+                  const maxMax = toLocalInput(new Date(Date.now() + MAX_DEADLINE_DAYS * 86_400_000));
                   return (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Campaign Deadline</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start font-normal",
-                                !selected && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {selected
-                                ? selected.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "Pick a date"}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selected}
-                            onSelect={(d) => field.onChange(d ? d.toISOString().split('T')[0] : '')}
-                            disabled={(d) => d < minDate || d > maxDate}
-                            initialFocus
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="datetime-local"
+                            min={nowMin}
+                            max={maxMax}
+                            {...field}
                           />
-                        </PopoverContent>
-                      </Popover>
+                          <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </FormControl>
                       <FormDescription>
-                        Must be {MIN_DEADLINE_DAYS}–{MAX_DEADLINE_DAYS} days from today. Contract-enforced.
+                        Within {MAX_DEADLINE_DAYS} days from today.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

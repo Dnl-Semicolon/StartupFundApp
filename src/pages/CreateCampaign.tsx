@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { parseEther } from 'ethers';
-import { getStartupFund, ensureRegistered } from '@/lib/contracts';
+import { getStartupFund, ensureRegistered, getCampaignManager } from '@/lib/contracts';
 import { useWallet } from '@/hooks/useWallet';
+import { patchOverride } from '@/lib/demoState';
 import { motion } from 'framer-motion';
 import { 
   Rocket, 
@@ -46,8 +47,19 @@ export default function CreateCampaign() {
       const goalWei = parseEther(data.goalAmount.toString());
       const minWei  = parseEther(data.minContribution.toString());
 
-      // Convert date string "YYYY-MM-DD" → Unix timestamp (seconds)
-      const deadline = Math.floor(new Date(data.deadline).getTime() / 1000);
+      // User's chosen deadline (may be minutes-out for demo).
+      const userDeadlineMs = new Date(data.deadline).getTime();
+      const userDeadlineISO = new Date(userDeadlineMs).toISOString();
+
+      // Contract requires deadline >= block.timestamp + 1 day. If user picked
+      // sooner (e.g. 2 minutes for demo), send chain a 1d+1min deadline but
+      // remember the real one in demoState so the UI still reflects user intent.
+      const ONE_DAY_SEC = 86_400;
+      const BUFFER_SEC  = 120; // +2 min safety margin beyond contract's 1-day floor
+      const nowSec      = Math.floor(Date.now() / 1000);
+      const userSec     = Math.floor(userDeadlineMs / 1000);
+      const hijacked    = userSec < nowSec + ONE_DAY_SEC;
+      const deadline    = hijacked ? nowSec + ONE_DAY_SEC + BUFFER_SEC : userSec;
 
       // Parse tags: split on commas, trim, lowercase, dedupe, drop empty
       const rawTags: string = typeof data.tags === 'string' ? data.tags : '';
@@ -88,6 +100,20 @@ export default function CreateCampaign() {
         tags,
       );
       await tx.wait();
+
+      // If we hijacked the deadline, stash the user's real pick in the demo
+      // overlay so UI reads show the short deadline even though the chain has
+      // a 1-day+ deadline baked in.
+      if (hijacked) {
+        try {
+          const cm        = getCampaignManager();
+          const totalBig  = await (cm as unknown as { campaignCount: () => Promise<bigint> }).campaignCount();
+          const newId     = (Number(totalBig) - 1).toString();
+          patchOverride(newId, { deadlineOverride: userDeadlineISO });
+        } catch {
+          // best-effort — overlay not critical if id lookup fails
+        }
+      }
 
       setShowSuccess(true);
       setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);

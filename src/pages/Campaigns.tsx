@@ -8,7 +8,6 @@ import { SearchBar } from '@/components/SearchBar';
 import { FeaturedSection } from '@/components/FeaturedSection';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useFeatured } from '@/hooks/useFeatured';
-import { useWallet } from '@/hooks/useWallet';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -33,17 +32,14 @@ export default function Campaigns() {
   const [sortBy, setSortBy] = useState('newest');
   const { campaigns, loading, error, isMockData } = useCampaigns();
   const featured = useFeatured(campaigns);
-  const { address } = useWallet();
 
   const filteredCampaigns = useMemo(() => {
-    const myAddr = address?.toLowerCase();
     return campaigns
       .filter((campaign) => {
-        const isMine = !!myAddr && campaign.creatorId.toLowerCase() === myAddr;
-        // REJECTED is terminal — hide from everyone.
+        // REJECTED is terminal — hide from everyone (no further action possible).
         if (campaign.status === CAMPAIGN_STATUS.REJECTED) return false;
-        // PENDING: hide from others, show to creator so they can track it.
-        if (campaign.status === CAMPAIGN_STATUS.PENDING && !isMine) return false;
+        // PENDING campaigns must be visible so community can find + vote on them.
+        // The amber "Awaiting Vote" badge on CampaignCard already signals status.
         return selectedCategory === 'All' || campaign.category === selectedCategory;
       })
       .sort((a, b) => {
@@ -66,7 +62,7 @@ export default function Campaigns() {
             return 0;
         }
       });
-  }, [campaigns, selectedCategory, sortBy, address]);
+  }, [campaigns, selectedCategory, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">

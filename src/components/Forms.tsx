@@ -546,9 +546,10 @@ export function WithdrawForm({ campaignId, onSubmit }: { campaignId: string, onS
 /**
  * Refund Request Form for Failed Campaigns
  */
-export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: {
+export function RefundRequestForm({ campaignId, contributionAmount, alreadyRefunded = false, onSubmit }: {
   campaignId: string,
   contributionAmount: number,
+  alreadyRefunded?: boolean,
   onSubmit: () => Promise<void>
 }) {
   const { isConnected, connect } = useWallet();
@@ -566,6 +567,23 @@ export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: 
       setIsProcessing(false);
     }
   };
+
+  if (alreadyRefunded) {
+    return (
+      <Card className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+            <Info className="h-5 w-5" />
+            Refund Issued
+          </CardTitle>
+          <CardDescription>
+            Your contribution of {contributionAmount.toFixed(4)} ETH has been
+            returned to your wallet.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">

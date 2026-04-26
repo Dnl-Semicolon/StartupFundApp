@@ -27,6 +27,7 @@ export const STARTUPFUND_ABI = [
   'function fundCampaign(uint256 campaignId) external payable',
   'function withdraw(uint256 campaignId) external',
   'function claimRefund(uint256 campaignId) external',
+  'function refundAll(uint256 campaignId) external',
   // Write — flag (legacy, kept for back-compat; not on-chain in current StartupFund.sol)
   'function flagCampaign(uint256 campaignId) external',
   'function unflagCampaign(uint256 campaignId) external',

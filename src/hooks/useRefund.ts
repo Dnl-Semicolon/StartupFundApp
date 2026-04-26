@@ -47,8 +47,8 @@ export function useRefund(campaignId: number | null, userAddress: string | null)
       // Get contribution amount
       const contribution = await fundingVault.getContribution(campaignId, userAddress);
       const contributionAmount = Number(formatEther(contribution));
-      // Check if refund already claimed
-      const refundClaimed = await fundingVault.getRefundClaimed(campaignId, userAddress);
+      // Check if refund already claimed (FundingVault exposes a public mapping)
+      const refundClaimed = await fundingVault.refundClaimed(campaignId, userAddress);
 
       // Eligible if has contribution and hasn't claimed refund yet
       const isEligible = contributionAmount > 0 && !refundClaimed;

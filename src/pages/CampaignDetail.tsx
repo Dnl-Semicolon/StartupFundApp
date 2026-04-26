@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { parseEther } from 'ethers';
-import { getStartupFund, getReadContract, ensureRegistered, STARTUPFUND_ABI } from '@/lib/contracts';
+import { parseEther, formatEther } from 'ethers';
+import { getStartupFund, getReadContract, getFundingVault, ensureRegistered, STARTUPFUND_ABI } from '@/lib/contracts';
 import { CONTRACT_ADDRESSES } from '@/lib/contractAddresses';
 import { useWallet } from '@/hooks/useWallet';
 import { useRegistration } from '@/hooks/useRegistration';
@@ -35,7 +35,12 @@ import { VotingPanel } from '@/components/VotingPanel';
 import { DisburseProfitsForm } from '@/components/DisburseProfitsForm';
 import { getOverride, recordReclaim } from '@/lib/demoState';
 import { useContributors } from '@/hooks/useContributors';
+import { useChainNow } from '@/hooks/useChainNow';
 import { toast } from 'sonner';
+
+// Per-session dedupe so the lazy auto-refund only fires once per campaign per
+// browser session — prevents re-prompting MetaMask on every navigation.
+const autoRefundAttempted = new Set<string>();
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -56,24 +61,49 @@ function RefundFormWithContribution({
   connectedAddress: string | null;
   onSubmit: () => Promise<void>;
 }) {
-  const { contributors } = useContributors(campaign);
-  const myAddr = connectedAddress?.toLowerCase();
-  let contribution = myAddr
-    ? contributors.find(c => c.address.toLowerCase() === myAddr)?.amount ?? 0
-    : 0;
+  // Pull HISTORICAL contribution from FundingReceived events (vault zeroes
+  // the live `contributions` mapping during refund, so reading getContribution
+  // post-refund returns 0). Also resolve refundClaimed to flip the card to a
+  // success state instead of leaving the active CTA visible.
+  const [historical,    setHistorical]    = useState(0);
+  const [alreadyClaimed, setAlreadyClaimed] = useState(false);
 
-  // Demo hardcode: c6 (Relic) is the canonical "cancelled campaign with active
-  // refund" screenshot target. Always surface a non-zero contribution for the
-  // connected wallet so the Claim Refund active state renders without needing
-  // the viewer to import a Hardhat test account or patch contributors[].
-  if (campaign.id === 'c6' && myAddr && contribution === 0) {
-    contribution = 0.75;
-  }
+  useEffect(() => {
+    if (!connectedAddress) return;
+    if (!/^\d+$/.test(campaign.id)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const sf = getReadContract(CONTRACT_ADDRESSES.startupFund, STARTUPFUND_ABI);
+        const events = await (sf as unknown as {
+          queryFilter: (f: unknown, from: number) => Promise<Array<{ args: { campaignId: bigint; contributor: string; amount: bigint } }>>;
+          filters: { FundingReceived: () => unknown };
+        }).queryFilter(sf.filters.FundingReceived(), 0);
+        const my = events.filter(e =>
+          e.args.contributor?.toLowerCase() === connectedAddress.toLowerCase() &&
+          e.args.campaignId.toString() === campaign.id
+        );
+        const totalWei = my.reduce((acc, e) => acc + BigInt(e.args.amount), 0n);
+        if (cancelled) return;
+        setHistorical(parseFloat(formatEther(totalWei)));
+
+        const fv = getFundingVault();
+        const claimed = await (fv as unknown as {
+          refundClaimed: (id: bigint, addr: string) => Promise<boolean>;
+        }).refundClaimed(BigInt(campaign.id), connectedAddress);
+        if (!cancelled) setAlreadyClaimed(Boolean(claimed));
+      } catch (err) {
+        console.debug('sf:refund-form:history-fetch-failed', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [campaign.id, connectedAddress, campaign.status, campaign.raisedAmount]);
 
   return (
     <RefundRequestForm
       campaignId={campaign.id}
-      contributionAmount={contribution}
+      contributionAmount={historical}
+      alreadyRefunded={alreadyClaimed}
       onSubmit={onSubmit}
     />
   );
@@ -159,20 +189,43 @@ export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const { address, isConnected } = useWallet();
   const { isRegistered } = useRegistration();
-  const { campaigns, loading: campaignsLoading } = useCampaigns();
+  const { campaigns, loading: campaignsLoading, refetch: refetchCampaigns } = useCampaigns();
+  const chainNow = useChainNow();
 
   const campaign = useMemo(() => {
     return campaigns.find(c => c.id === id || c.slug === id);
   }, [campaigns, id]);
 
-  // All hooks must be called unconditionally — before any early returns
-  const daysLeft = useMemo(() => {
-    if (!campaign) return 0;
-    const now = new Date();
+  // All hooks must be called unconditionally — before any early returns.
+  // Time-left is computed against CHAIN time (not wall clock) so the dev-panel
+  // warp correctly trips deadlines in the UI.
+  const timeLeft = useMemo(() => {
+    if (!campaign) return { secs: 0, label: '0', expired: true, deadlineDate: new Date(0) };
     const deadline = new Date(campaign.deadline);
-    const diff = deadline.getTime() - now.getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }, [campaign]);
+    const deadlineSec = Math.floor(deadline.getTime() / 1000);
+    const remaining = Math.max(0, deadlineSec - chainNow);
+    const expired = remaining === 0;
+    let label: string;
+    if (expired) {
+      label = 'Closed';
+    } else if (remaining >= 86400) {
+      const d = Math.floor(remaining / 86400);
+      const h = Math.floor((remaining % 86400) / 3600);
+      label = h > 0 ? `${d}d ${h}h` : `${d}d`;
+    } else if (remaining >= 3600) {
+      const h = Math.floor(remaining / 3600);
+      const m = Math.floor((remaining % 3600) / 60);
+      label = m > 0 ? `${h}h ${m}m` : `${h}h`;
+    } else if (remaining >= 60) {
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      label = `${m}m ${s}s`;
+    } else {
+      label = `${remaining}s`;
+    }
+    return { secs: remaining, label, expired, deadlineDate: deadline };
+  }, [campaign, chainNow]);
+  const daysLeft = timeLeft.secs > 0 ? Math.ceil(timeLeft.secs / 86400) : 0;
 
   // ── Flag state ────────────────────────────────────────────────────────────
   const FLAG_THRESHOLD = 5;
@@ -181,6 +234,9 @@ export default function CampaignDetail() {
   const [hasAlreadyFlagged, setHasAlreadyFlagged] = useState(false);
   // demo mode only: campaign reached threshold → treat as FLAGGED status
   const [demoFlagged,      setDemoFlagged]      = useState(false);
+  // On-chain: has the creator already withdrawn? Drives the "Already withdrawn"
+  // celebration card vs. the active Withdraw button.
+  const [fundsReleased,    setFundsReleased]    = useState(false);
 
   // localStorage helpers for demo mode persistence
   const demoFlaggKey  = (cid: string) => `sf_demo_flags_${cid}`;
@@ -214,6 +270,59 @@ export default function CampaignDetail() {
     }
   }, [campaign?.id, address]);
 
+  // Read FundingVault.fundsReleased(campaignId) for numeric IDs only.
+  // Refresh whenever the campaign changes (e.g. after refetch from withdraw tx).
+  useEffect(() => {
+    if (!campaign) return;
+    if (!/^\d+$/.test(campaign.id)) { setFundsReleased(false); return; }
+    let cancelled = false;
+    const fv = getFundingVault();
+    (fv as unknown as { fundsReleased: (id: bigint) => Promise<boolean> })
+      .fundsReleased(BigInt(campaign.id))
+      .then((r) => { if (!cancelled) setFundsReleased(Boolean(r)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [campaign?.id, campaign?.raisedAmount, campaign?.status]);
+
+  // Lazy auto-refund: fires when a campaign's deadline has passed (per CHAIN
+  // clock) and goal wasn't met. Mirrors voting auto-settle. Status may still
+  // read ACTIVE on chain (no one's called checkAndUpdateStatus yet) — that's
+  // fine because refundAll() calls checkAndUpdateStatus internally before its
+  // CANCELLED guard. Module-level dedupe avoids repeat MetaMask popups.
+  useEffect(() => {
+    if (!campaign || !address || !isConnected || !isRegistered) return;
+    if (!/^\d+$/.test(campaign.id)) return;
+    if (autoRefundAttempted.has(campaign.id)) return;
+    if (campaign.status === CAMPAIGN_STATUS.FUNDED) return;
+    if (campaign.status === CAMPAIGN_STATUS.PENDING) return;
+    if (campaign.status === CAMPAIGN_STATUS.REJECTED) return;
+    // Either already CANCELLED, or ACTIVE with deadline trip + goal-miss
+    const deadlineTripped = timeLeft.expired && campaign.raisedAmount < campaign.goalAmount;
+    if (campaign.status !== CAMPAIGN_STATUS.CANCELLED && !deadlineTripped) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const fv = getFundingVault();
+        const balance = await (fv as unknown as { vaultBalance: (id: bigint) => Promise<bigint> })
+          .vaultBalance(BigInt(campaign.id));
+        if (cancelled) return;
+        if (balance === 0n) return;
+        autoRefundAttempted.add(campaign.id);
+        const sf = await getStartupFund(true);
+        const tx = await (sf as unknown as { refundAll: (id: bigint) => Promise<{ wait: () => Promise<unknown> }> })
+          .refundAll(BigInt(campaign.id));
+        await tx.wait();
+        toast.success('Refunds issued to all backers.');
+        refetchCampaigns();
+        window.dispatchEvent(new Event('sf:stats-refresh'));
+      } catch (err) {
+        console.debug('sf:refundAll auto-trigger skipped/failed', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [campaign?.id, campaign?.status, campaign?.raisedAmount, campaign?.goalAmount,
+      timeLeft.expired, address, isConnected, isRegistered, refetchCampaigns]);
+
   if (campaignsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -244,7 +353,7 @@ export default function CampaignDetail() {
 
   // Sidebar form visibility rules
   const canAct           = isConnected && isRegistered;
-  const showFundForm     = canAct && !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && daysLeft > 0;
+  const showFundForm     = canAct && !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE && !timeLeft.expired;
   const showWithdrawForm = isCreator && effectiveStatus === CAMPAIGN_STATUS.FUNDED;
   const showRefundForm   = canAct && !isCreator && (effectiveStatus === CAMPAIGN_STATUS.CANCELLED || effectiveStatus === CAMPAIGN_STATUS.FLAGGED);
   const showFlagButton   = !isCreator && effectiveStatus === CAMPAIGN_STATUS.ACTIVE;
@@ -258,7 +367,18 @@ export default function CampaignDetail() {
     const tx = await contract.fundCampaign(BigInt(campaign.id), {
       value: parseEther(amount.toString()),
     });
-    await tx.wait();
+    const receipt = await tx.wait();
+    toast.success(`Contributed ${amount} ETH`);
+    // Optimistic dashboard update — fires immediately so /dashboard's
+    // "Campaigns I Backed" + Total Contributed reflect the tx without waiting
+    // for the 15s polling tick.
+    window.dispatchEvent(new CustomEvent('sf:tx-funded', { detail: {
+      campaignId: campaign.id,
+      amount: amount.toString(),
+      txHash: receipt?.hash ?? tx.hash,
+      blockNumber: receipt?.blockNumber ?? 0,
+    } }));
+    refetchCampaigns();
   };
 
   const handleWithdrawSubmit = async (): Promise<void> => {
@@ -266,81 +386,45 @@ export default function CampaignDetail() {
     const contract = await getStartupFund(true);
     const tx = await contract.withdraw(BigInt(campaign.id));
     await tx.wait();
+    toast.success('Funds withdrawn — reward tokens minted to backers.');
+    refetchCampaigns();
+    setFundsReleased(true);
   };
 
   const handleRefundSubmit = async (): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
-
-    // Mock campaigns (non-numeric id) can't hit the real contract. To still
-    // pop MetaMask for the screenshot, send a real self-transfer of 0 ETH —
-    // produces a real Ganache tx, real MetaMask confirm dialog, no balance
-    // movement beyond gas. Real chain campaigns go through claimRefund().
-    const isMock = !/^\d+$/.test(campaign.id);
-    if (isMock) {
-      const { sendDirect } = await import('@/lib/directTransfer');
-      await sendDirect(address, 0);
-      return;
-    }
-
+    await ensureRegistered(address);
     const contract = await getStartupFund(true);
     const tx = await contract.claimRefund(BigInt(campaign.id));
     await tx.wait();
+    toast.success('Refund claimed.');
+    refetchCampaigns();
   };
 
   const handleFlagSubmit = async (): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
-
-    const isDemo = !/^\d+$/.test(campaign.id);
-
-    if (isDemo) {
-      // Demo mode — persist to localStorage
-      const raw = localStorage.getItem(demoFlaggKey(campaign.id));
-      const flaggers: string[] = raw ? JSON.parse(raw) : [];
-      if (!flaggers.includes(address.toLowerCase())) {
-        flaggers.push(address.toLowerCase());
-        localStorage.setItem(demoFlaggKey(campaign.id), JSON.stringify(flaggers));
-      }
-      setFlagCount(flaggers.length);
-      setHasAlreadyFlagged(true);
-      if (flaggers.length >= FLAG_THRESHOLD) {
-        localStorage.setItem(demoFlaggdKey(campaign.id), 'true');
-        setDemoFlagged(true);
-      }
-      return;
-    }
-
-    // Real mode — on-chain tx
     await ensureRegistered(address);
     const contract = await getStartupFund(true);
     const tx = await contract.flagCampaign(BigInt(campaign.id));
     await tx.wait();
     setFlagCount(prev => prev + 1);
     setHasAlreadyFlagged(true);
+    toast.success('Campaign flagged.');
+    refetchCampaigns();
+    // If threshold tripped, the same tx auto-cancels + refunds. Stats need
+    // to refresh so dashboards reflect the refund.
+    window.dispatchEvent(new Event('sf:stats-refresh'));
   };
 
   const handleUnflagSubmit = async (): Promise<void> => {
     if (!address) throw new Error('Wallet not connected');
-
-    const isDemo = !/^\d+$/.test(campaign.id);
-
-    if (isDemo) {
-      // Demo mode — remove from localStorage
-      const raw = localStorage.getItem(demoFlaggKey(campaign.id));
-      const flaggers: string[] = raw ? JSON.parse(raw) : [];
-      const updated = flaggers.filter(a => a !== address.toLowerCase());
-      localStorage.setItem(demoFlaggKey(campaign.id), JSON.stringify(updated));
-      setFlagCount(updated.length);
-      setHasAlreadyFlagged(false);
-      return;
-    }
-
-    // Real mode — on-chain tx
     await ensureRegistered(address);
     const contract = await getStartupFund(true);
     const tx = await contract.unflagCampaign(BigInt(campaign.id));
     await tx.wait();
     setFlagCount(prev => Math.max(0, prev - 1));
     setHasAlreadyFlagged(false);
+    toast.success('Flag removed.');
   };
 
   return (
@@ -403,11 +487,21 @@ export default function CampaignDetail() {
                 title="Backers"
                 value={campaign.backersCount.toString()}
               />
-              <StatsCard 
-                title="Days Left"
-                value={daysLeft.toString()}
+              <StatsCard
+                title="Time Left"
+                value={timeLeft.label}
               />
             </div>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Deadline:{' '}
+              <span className="font-mono">
+                {timeLeft.deadlineDate.toLocaleString(undefined, {
+                  year: 'numeric', month: 'short', day: 'numeric',
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+              {' · '}chain clock drives the countdown (see DevPanel)
+            </p>
           </motion.section>
 
           <Separator />
@@ -581,23 +675,19 @@ export default function CampaignDetail() {
                 />
               )}
 
-              {/* FUNDED + creator → Withdraw OR Disburse (depending on demo overlay) */}
-              {showWithdrawForm && !getOverride(campaign.id)?.disbursedAt && (
-                <>
-                  <WithdrawForm
-                    campaignId={campaign.id}
-                    onSubmit={handleWithdrawSubmit}
-                  />
-                  <div className="pt-4 mt-4 border-t border-border/40">
-                    <DisburseProfitsForm campaign={campaign} />
-                  </div>
-                </>
+              {/* FUNDED + creator → Withdraw button OR "Already withdrawn" card */}
+              {showWithdrawForm && !fundsReleased && (
+                <WithdrawForm
+                  campaignId={campaign.id}
+                  onSubmit={handleWithdrawSubmit}
+                />
               )}
-              {showWithdrawForm && getOverride(campaign.id)?.disbursedAt && (
+              {showWithdrawForm && fundsReleased && (
                 <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm text-center space-y-1">
-                  <p className="font-semibold text-emerald-400">Profits Disbursed</p>
+                  <p className="font-semibold text-emerald-400">Funds Withdrawn</p>
                   <p className="text-muted-foreground text-xs">
-                    Contributors have received their payouts via direct transfer.
+                    The raised ETH has been released to the creator and reward
+                    tokens minted to all backers.
                   </p>
                 </div>
               )}

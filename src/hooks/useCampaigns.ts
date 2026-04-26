@@ -15,30 +15,6 @@ const STATUS_MAP: Record<number, Campaign['status']> = {
   4: CAMPAIGN_STATUS.REJECTED,
 };
 
-/** Peels the optional "\n---meta\n{...json}" tail off a description and
- *  returns the cleaned description plus any structured metadata found. */
-function parseDescription(raw: string): {
-  description: string;
-  profitReturnRate?: number;
-  profitReturnDeadline?: string;
-} {
-  const marker = '\n---meta\n';
-  const idx = raw.lastIndexOf(marker);
-  if (idx === -1) return { description: raw };
-  const body = raw.slice(0, idx);
-  const tail = raw.slice(idx + marker.length).trim();
-  try {
-    const parsed = JSON.parse(tail) as { profitReturnRate?: number; profitReturnDeadline?: string };
-    return {
-      description: body,
-      profitReturnRate:     typeof parsed.profitReturnRate     === 'number' ? parsed.profitReturnRate     : undefined,
-      profitReturnDeadline: typeof parsed.profitReturnDeadline === 'string' ? parsed.profitReturnDeadline : undefined,
-    };
-  } catch {
-    return { description: raw };
-  }
-}
-
 /** Merge a demoState override on top of a chain-derived Campaign.
  *  Overlay wins: statusOverride (voting skip, disbursement, refund reclaim),
  *  deadlineOverride (Option Y sub-1-day hijack). */
@@ -105,14 +81,18 @@ export function useCampaigns(): UseCampaignsResult {
         const fetched: Campaign[] = [];
 
         for (let i = 0; i < count; i++) {
-          const [meta, stats, desc, tags] = await Promise.all([
+          const [meta, stats, desc, tags, profitTerms] = await Promise.all([
             cm.getCampaignMeta(i),
             cm.getCampaignStats(i),
             cm.getCampaignDescription(i),
             cm.getCampaignTags(i),
+            cm.getProfitTerms(i),
           ]);
 
-          const parsedDesc = parseDescription(desc as string);
+          // Profit fields are now first-class on-chain. Falls back to undefined
+          // when both are 0 (= no profit return promised).
+          const rateNum     = Number(profitTerms.rate ?? profitTerms[0]);
+          const returnDlSec = Number(profitTerms.returnDeadline ?? profitTerms[1]);
 
           fetched.push({
             id:               i.toString(),
@@ -120,9 +100,9 @@ export function useCampaigns(): UseCampaignsResult {
             creator:          addrToUser(meta.creator as string),
             title:            meta.title as string,
             slug:             meta.slug as string,
-            description:      parsedDesc.description,
-            profitReturnRate: parsedDesc.profitReturnRate,
-            profitReturnDeadline: parsedDesc.profitReturnDeadline,
+            description:      desc as string,
+            profitReturnRate:     rateNum > 0 ? rateNum : undefined,
+            profitReturnDeadline: returnDlSec > 0 ? new Date(returnDlSec * 1000).toISOString() : undefined,
             shortDescription: meta.shortDescription as string,
             goalAmount:       parseFloat(formatEther(stats.goalAmount as bigint)),
             raisedAmount:     parseFloat(formatEther(stats.raisedAmount as bigint)),

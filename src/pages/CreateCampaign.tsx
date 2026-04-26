@@ -59,27 +59,23 @@ export default function CreateCampaign() {
           ))
         : [];
 
-      // Profit-return metadata rides along in the description tail so the
-      // contract's on-chain description field carries it without needing a
-      // schema change. useCampaigns.parseDescription peels this off on read.
-      let descriptionWithMeta: string = data.description;
-      const meta: Record<string, unknown> = {};
-      if (data.profitReturnRate !== undefined && data.profitReturnRate !== null && data.profitReturnRate !== '') {
-        const n = Number(data.profitReturnRate);
-        if (!Number.isNaN(n)) meta.profitReturnRate = n;
-      }
-      if (data.profitReturnDeadline) {
-        meta.profitReturnDeadline = data.profitReturnDeadline;
-      }
-      if (Object.keys(meta).length > 0) {
-        descriptionWithMeta = `${data.description}\n\n---meta\n${JSON.stringify(meta)}`;
-      }
+      // Profit-return is on-chain via a SECOND tx (setProfitTerms). One-tx form
+      // hit Solidity's stack-too-deep limit at 13 params, so we split it.
+      const profitReturnRate = data.profitReturnRate !== undefined &&
+                               data.profitReturnRate !== null &&
+                               data.profitReturnRate !== ''
+        ? Math.floor(Number(data.profitReturnRate))
+        : 0;
+      const profitReturnDeadline = data.profitReturnDeadline
+        ? Math.floor(new Date(data.profitReturnDeadline).getTime() / 1000)
+        : 0;
+      const hasProfitTerms = profitReturnRate > 0 && profitReturnDeadline > 0;
 
       const contract = await getStartupFund(true);
       const tx = await contract.createCampaign(
         data.title,
         slug,
-        descriptionWithMeta,
+        data.description,
         data.shortDescription,
         data.imageUrl,
         data.category,
@@ -90,6 +86,19 @@ export default function CreateCampaign() {
         tags,
       );
       await tx.wait();
+
+      // Second tx: attach profit terms. Pull the new campaign id from chain
+      // since the create receipt's return value isn't directly accessible.
+      if (hasProfitTerms) {
+        const cm = (await import('@/lib/contracts')).getCampaignManager();
+        const total = await (cm as unknown as { campaignCount: () => Promise<bigint> }).campaignCount();
+        const newId = BigInt(total) - 1n;
+        const tx2 = await (contract as unknown as {
+          setProfitTerms: (id: bigint, rate: bigint, deadline: bigint) =>
+            Promise<{ wait: () => Promise<unknown> }>;
+        }).setProfitTerms(newId, BigInt(profitReturnRate), BigInt(profitReturnDeadline));
+        await tx2.wait();
+      }
 
       setShowSuccess(true);
       setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);
@@ -117,6 +126,10 @@ export default function CreateCampaign() {
           return 'Please give your campaign a title.';
         if (/Goal must be > 0/i.test(revertText))
           return 'Funding goal must be greater than 0 ETH.';
+        if (/Profit return rate must be 1-100/i.test(revertText))
+          return 'Profit return % must be between 1 and 100.';
+        if (/Return deadline must be after campaign deadline/i.test(revertText))
+          return 'Return By must be after the campaign deadline.';
         if (/Wallet not registered/i.test(revertText))
           return 'Your wallet is not yet registered on-chain. Try reconnecting your wallet.';
         if (raw?.code === 4001 || raw?.code === 'ACTION_REJECTED' || /user rejected|ACTION_REJECTED/i.test(revertText))

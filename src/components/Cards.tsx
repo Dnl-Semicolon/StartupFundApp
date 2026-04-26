@@ -176,9 +176,13 @@ interface StatsCardProps {
   title: string;
   value: string;
   change?: string;
+  /** When true, render the value with a red strike-through line. Used to
+   *  signal "campaign closed early" while still keeping the original
+   *  countdown/value visible behind the slash. */
+  strikethrough?: boolean;
 }
 
-export function StatsCard({ title, value, change }: StatsCardProps) {
+export function StatsCard({ title, value, change, strikethrough = false }: StatsCardProps) {
   const isPositive = change?.startsWith('+');
 
   return (
@@ -190,7 +194,15 @@ export function StatsCard({ title, value, change }: StatsCardProps) {
             {title}
           </span>
           <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-bold font-mono tracking-tight">{value}</span>
+            <span className={cn(
+              "text-3xl font-bold font-mono tracking-tight relative",
+              strikethrough && "text-muted-foreground"
+            )}>
+              {value}
+              {strikethrough && (
+                <span className="absolute left-0 right-0 top-1/2 h-0.5 bg-destructive -rotate-3 origin-center" />
+              )}
+            </span>
             {change && (
               <div className={cn(
                 "flex items-center text-xs font-semibold px-2 py-0.5 rounded-full",

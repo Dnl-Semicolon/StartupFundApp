@@ -22,12 +22,19 @@ export const ACCESS_CONTROL_ABI = [
 ];
 
 export const STARTUPFUND_ABI = [
-  // Write — campaigns
+  // Write — campaigns. Profit terms are attached separately via setProfitTerms()
+  // because of EVM stack-depth limits on a single 13-arg function.
   'function createCampaign(string title, string slug, string description, string shortDescription, string imageUrl, string category, uint256 goalAmount, uint256 minContribution, uint256 deadline, string tokenSymbol, string[] tags) external returns (uint256)',
+  'function setProfitTerms(uint256 campaignId, uint256 rate, uint256 returnDeadline) external',
   'function fundCampaign(uint256 campaignId) external payable',
   'function withdraw(uint256 campaignId) external',
   'function claimRefund(uint256 campaignId) external',
   'function refundAll(uint256 campaignId) external',
+  // Write — profit disbursement
+  'function fundPayoutPot(uint256 campaignId) external payable',
+  'function disburseProfits(uint256 campaignId) external',
+  // Read — profit disbursement
+  'function payoutRequired(uint256 campaignId) external view returns (uint256)',
   // Write — flag (legacy, kept for back-compat; not on-chain in current StartupFund.sol)
   'function flagCampaign(uint256 campaignId) external',
   'function unflagCampaign(uint256 campaignId) external',
@@ -57,6 +64,7 @@ export const CAMPAIGN_MANAGER_ABI = [
   'function getCampaignDescription(uint256 campaignId) external view returns (string)',
   'function getCampaignTags(uint256 campaignId) external view returns (string[])',
   'function getStatus(uint256 campaignId) external view returns (uint8)',
+  'function getProfitTerms(uint256 campaignId) external view returns (uint256 rate, uint256 returnDeadline)',
 ];
 
 export const FUNDING_VAULT_ABI = [
@@ -65,8 +73,12 @@ export const FUNDING_VAULT_ABI = [
   'function refundClaimed(uint256 campaignId, address contributor) external view returns (bool)',
   'function vaultBalance(uint256 campaignId) external view returns (uint256)',
   'function fundsReleased(uint256 campaignId) external view returns (bool)',
+  'function payoutPot(uint256 campaignId) external view returns (uint256)',
+  'function payoutDisbursed(uint256 campaignId) external view returns (bool)',
   'event Deposited(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
   'event RefundIssued(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
+  'event PayoutDeposited(uint256 indexed campaignId, address indexed creator, uint256 amount)',
+  'event PayoutSent(uint256 indexed campaignId, address indexed contributor, uint256 amount)',
 ];
 
 export const CAMPAIGN_VOTING_ABI = [

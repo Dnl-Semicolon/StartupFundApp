@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { parseEther, formatEther } from 'ethers';
 import { getStartupFund, getReadContract, getFundingVault, ensureRegistered, STARTUPFUND_ABI } from '@/lib/contracts';
@@ -110,80 +110,183 @@ function RefundFormWithContribution({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OverdueReclaimBanner
-// Surfaced to contributors when a FUNDED campaign has blown past its
-// profitReturnDeadline without the creator running Disburse. Records a reclaim
-// intent in demoState for the creator to honour (demo-only, no ETH moves here).
+// PayoutPotPanel
+// Real on-chain profit-disbursement flow for FUNDED campaigns that promised a
+// profit return at create time. Three roles:
+//   - Creator (pre-deadline, pot empty)   → "Fund the payout pot" CTA
+//   - Creator (pre-deadline, pot funded)  → "Pot funded — awaiting deadline"
+//   - Backer  (pre-deadline)              → "Awaiting profit disbursement" + countdown
+//   - Anyone  (post-deadline, !disbursed) → lazy auto-fire disburseProfits()
+//   - Anyone  (disbursed)                 → "Profits disbursed" success
 // ─────────────────────────────────────────────────────────────────────────────
-function OverdueReclaimBanner({
-  campaign, isCreator, connectedAddress,
+function PayoutPotPanel({
+  campaign, isCreator, connectedAddress, chainNow,
 }: {
   campaign: Campaign;
   isCreator: boolean;
   connectedAddress: string | null;
+  chainNow: number;
 }) {
-  const { contributors } = useContributors(campaign);
-  const over = getOverride(campaign.id);
-  const isFunded   = campaign.status === CAMPAIGN_STATUS.FUNDED;
-  const isDisbursed = !!over?.disbursedAt;
-  const deadlineISO = campaign.profitReturnDeadline;
-  const overdue = !!deadlineISO && new Date(deadlineISO).getTime() < Date.now();
-  const myAddr = connectedAddress?.toLowerCase();
-  const realEntry = myAddr
-    ? contributors.find(c => c.address.toLowerCase() === myAddr)
-    : undefined;
-  // Demo hardcode: c8 (GreenLoop) is the canonical Overdue-Reclaim screenshot
-  // target. Ensure any connected wallet sees the banner + active button.
-  const fakeForDemo = campaign.id === 'c8' && !!myAddr && !realEntry;
-  const myEntry = realEntry ?? (fakeForDemo ? { address: myAddr!, amount: 1.0 } : undefined);
-  const alreadyReclaimed = myAddr
-    ? !!(over?.reclaimed && over.reclaimed[myAddr] !== undefined)
-    : false;
+  const isFunded = campaign.status === CAMPAIGN_STATUS.FUNDED;
+  const rate     = campaign.profitReturnRate ?? 0;
+  const deadline = campaign.profitReturnDeadline;
+  const hasTerms = rate > 0 && !!deadline;
 
-  if (!isFunded || isDisbursed || !overdue || isCreator || !myEntry) return null;
+  const [pot,        setPot]       = useState<bigint>(0n);
+  const [disbursed,  setDisbursed] = useState(false);
+  const [required,   setRequired]  = useState<bigint>(0n);
+  const [busy,       setBusy]      = useState(false);
 
-  const handleReclaim = async () => {
+  const refresh = useCallback(async () => {
+    if (!hasTerms || !/^\d+$/.test(campaign.id)) return;
     try {
-      const { sendDirect } = await import('@/lib/directTransfer');
-      // Self-transfer of 0 ETH — pops MetaMask so the user can screenshot
-      // the signing dialog. No real balance movement beyond gas.
-      await sendDirect(myAddr!, 0);
-      recordReclaim(campaign.id, myAddr!, myEntry.amount);
-      toast.success(`Reclaim of ${myEntry.amount.toFixed(4)} ETH recorded.`);
-    } catch {
-      // sendDirect already surfaces failure toast
+      const fv = getFundingVault();
+      const sf = getReadContract(CONTRACT_ADDRESSES.startupFund, STARTUPFUND_ABI);
+      const [potWei, done, req] = await Promise.all([
+        (fv as unknown as { payoutPot: (id: bigint) => Promise<bigint> }).payoutPot(BigInt(campaign.id)),
+        (fv as unknown as { payoutDisbursed: (id: bigint) => Promise<boolean> }).payoutDisbursed(BigInt(campaign.id)),
+        (sf as unknown as { payoutRequired: (id: bigint) => Promise<bigint> }).payoutRequired(BigInt(campaign.id)),
+      ]);
+      setPot(potWei);
+      setDisbursed(Boolean(done));
+      setRequired(req);
+    } catch (err) {
+      console.debug('sf:payout:refresh-failed', err);
+    }
+  }, [campaign.id, hasTerms]);
+
+  useEffect(() => { refresh(); }, [refresh, campaign.status, chainNow]);
+
+  // Lazy auto-disburse: when chainNow >= profitReturnDeadline, pot is fully
+  // funded, and not yet disbursed — first registered visitor fires it.
+  useEffect(() => {
+    if (!hasTerms || !/^\d+$/.test(campaign.id)) return;
+    if (!isFunded) return;
+    if (!connectedAddress) return;
+    if (disbursed) return;
+    if (pot === 0n) return;
+    const deadlineSec = Math.floor(new Date(deadline!).getTime() / 1000);
+    if (chainNow < deadlineSec) return;
+    if (autoDisburseAttempted.has(campaign.id)) return;
+    autoDisburseAttempted.add(campaign.id);
+    (async () => {
+      try {
+        const sf = await getStartupFund(true);
+        const tx = await (sf as unknown as { disburseProfits: (id: bigint) => Promise<{ wait: () => Promise<unknown> }> })
+          .disburseProfits(BigInt(campaign.id));
+        await tx.wait();
+        toast.success('Profits disbursed to all backers.');
+        await refresh();
+        window.dispatchEvent(new Event('sf:stats-refresh'));
+      } catch (err) {
+        console.debug('sf:disburse auto-trigger skipped/failed', err);
+      }
+    })();
+  }, [hasTerms, campaign.id, isFunded, connectedAddress, disbursed, pot, chainNow, deadline, refresh]);
+
+  if (!isFunded || !hasTerms) return null;
+
+  const handleFundPot = async () => {
+    if (!connectedAddress) return;
+    setBusy(true);
+    try {
+      const sf = await getStartupFund(true);
+      const tx = await (sf as unknown as {
+        fundPayoutPot: (id: bigint, opts: { value: bigint }) => Promise<{ wait: () => Promise<unknown> }>;
+      }).fundPayoutPot(BigInt(campaign.id), { value: required });
+      await tx.wait();
+      toast.success('Payout pot funded.');
+      await refresh();
+    } catch (err) {
+      console.error('sf:fund-payout-pot-failed', err);
+      const msg = (err as { shortMessage?: string; message?: string })?.shortMessage
+        ?? (err as { message?: string })?.message
+        ?? 'Failed to fund payout pot';
+      toast.error(msg);
+    } finally {
+      setBusy(false);
     }
   };
 
+  const deadlineDate = new Date(deadline!);
+  const deadlineSec = Math.floor(deadlineDate.getTime() / 1000);
+  const past = chainNow >= deadlineSec;
+  const requiredEth = parseFloat(formatEther(required));
+  const potEth      = parseFloat(formatEther(pot));
+
+  if (disbursed) {
+    return (
+      <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm space-y-1">
+        <p className="font-semibold text-emerald-400">Profits Disbursed</p>
+        <p className="text-xs text-muted-foreground">
+          Backers received their share of the {requiredEth.toFixed(4)} ETH payout
+          pot proportional to their contribution ({rate}% profit on principal).
+        </p>
+      </div>
+    );
+  }
+
+  // Creator view: fund the pot
+  if (isCreator) {
+    if (pot === 0n) {
+      return (
+        <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 space-y-3">
+          <div>
+            <p className="font-semibold text-amber-400 text-sm">Profit Return Owed</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              You promised {rate}% profit by{' '}
+              <span className="font-mono text-foreground">{deadlineDate.toLocaleString()}</span>.
+              Deposit the exact payout pot now so backers can be paid out
+              automatically when the deadline arrives.
+            </p>
+          </div>
+          <div className="bg-background/50 rounded p-3 space-y-1 text-xs font-mono">
+            <div className="flex justify-between"><span>Raised</span><span>{campaign.raisedAmount.toFixed(4)} ETH</span></div>
+            <div className="flex justify-between"><span>Profit ({rate}%)</span><span>{(campaign.raisedAmount * rate / 100).toFixed(4)} ETH</span></div>
+            <div className="flex justify-between font-semibold border-t border-border/40 pt-1 mt-1">
+              <span>Required deposit</span><span>{requiredEth.toFixed(4)} ETH</span>
+            </div>
+          </div>
+          <Button
+            onClick={handleFundPot}
+            disabled={busy || past}
+            className="w-full bg-amber-600 hover:bg-amber-700"
+          >
+            {busy ? 'Submitting…' : past ? 'Deadline passed' : `Fund pot (${requiredEth.toFixed(4)} ETH)`}
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm space-y-1">
+        <p className="font-semibold text-emerald-400">Payout Pot Funded</p>
+        <p className="text-xs text-muted-foreground">
+          {potEth.toFixed(4)} ETH locked. Auto-disburses to backers at{' '}
+          <span className="font-mono text-foreground">{deadlineDate.toLocaleString()}</span>.
+        </p>
+      </div>
+    );
+  }
+
+  // Backer / general view
   return (
-    <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4 space-y-2">
-      <p className="font-semibold text-red-400 text-sm flex items-center gap-1.5">
-        <XCircle className="w-4 h-4" /> Disbursement Overdue
+    <div className="rounded-lg bg-blue-500/10 border border-blue-500/30 p-4 text-sm space-y-1">
+      <p className="font-semibold text-blue-400">
+        {pot === 0n ? 'Awaiting Creator Deposit' : 'Awaiting Disbursement'}
       </p>
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        Creator promised payout by{' '}
-        <span className="font-medium text-foreground">
-          {deadlineISO ? new Date(deadlineISO).toLocaleDateString() : ''}
-        </span>
-        . You may request to reclaim your original {myEntry.amount.toFixed(4)} ETH contribution.
+      <p className="text-xs text-muted-foreground">
+        Creator promised {rate}% profit return by{' '}
+        <span className="font-mono text-foreground">{deadlineDate.toLocaleString()}</span>.
+        {pot === 0n
+          ? ' Pot has not been funded yet.'
+          : ` ${potEth.toFixed(4)} ETH is locked, ready to disburse.`}
       </p>
-      {alreadyReclaimed ? (
-        <Badge variant="outline" className="border-amber-500/40 text-amber-400">
-          Reclaim requested
-        </Badge>
-      ) : (
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10"
-          onClick={handleReclaim}
-        >
-          Request Reclaim of {myEntry.amount.toFixed(4)} ETH
-        </Button>
-      )}
     </div>
   );
 }
+
+// Per-session dedupe for the lazy auto-disburse trigger.
+const autoDisburseAttempted = new Set<string>();
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
@@ -489,7 +592,17 @@ export default function CampaignDetail() {
               />
               <StatsCard
                 title="Time Left"
-                value={timeLeft.label}
+                value={
+                  campaign.status === CAMPAIGN_STATUS.CANCELLED ||
+                  campaign.status === CAMPAIGN_STATUS.REJECTED
+                    ? 'Closed'
+                    : timeLeft.label
+                }
+                strikethrough={
+                  (campaign.status === CAMPAIGN_STATUS.CANCELLED ||
+                   campaign.status === CAMPAIGN_STATUS.REJECTED) &&
+                  !timeLeft.expired
+                }
               />
             </div>
             <p className="text-xs text-muted-foreground -mt-2">
@@ -701,12 +814,13 @@ export default function CampaignDetail() {
                 />
               )}
 
-              {/* FUNDED + past profit-return deadline + not disbursed →
-                  contributors may reclaim their original. */}
-              <OverdueReclaimBanner
+              {/* FUNDED + profit-return promised → creator funds payout pot,
+                  backers see "Awaiting", auto-disburses at deadline. */}
+              <PayoutPotPanel
                 campaign={campaign}
                 isCreator={isCreator}
                 connectedAddress={address}
+                chainNow={chainNow}
               />
 
               {/* ACTIVE + registered non-creator → Flag form */}

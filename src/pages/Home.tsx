@@ -172,7 +172,7 @@ export default function Home() {
               </h2>
               <p className="text-muted-foreground text-lg max-w-2xl">
                 {isMockData
-                  ? 'Contracts not yet deployed — showing sample campaigns. Deploy to Ganache to see live data.'
+                  ? 'Contracts not yet deployed — showing sample campaigns. Deploy to see live data.'
                   : 'Hand-picked startups that are redefining industries with blockchain technology.'}
               </p>
             </div>
@@ -270,19 +270,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Partners/Social Proof */}
-      <section className="py-12 border-t">
-        <div className="container mx-auto px-4">
-          <p className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-8">Featured In</p>
-          <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale hover:grayscale-0 transition-all">
-            <div className="text-2xl font-bold">TechCrunch</div>
-            <div className="text-2xl font-bold">CoinDesk</div>
-            <div className="text-2xl font-bold">Forbes</div>
-            <div className="text-2xl font-bold">Bloomberg</div>
-            <div className="text-2xl font-bold">The Block</div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

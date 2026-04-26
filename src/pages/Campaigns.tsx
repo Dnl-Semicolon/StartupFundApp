@@ -92,10 +92,11 @@ export default function Campaigns() {
       {/* Filter Bar */}
       <section className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b border-border py-4">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            {/* Search and Category Tabs */}
-            <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto flex-1">
-              <SearchBar campaigns={campaigns} className="w-full md:w-96" />
+          <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
+            {/* Search first, full-width on its own row up to xl */}
+            <SearchBar campaigns={campaigns} className="w-full xl:flex-1 xl:min-w-[420px]" />
+            {/* Category Tabs */}
+            <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto">
               <Tabs
                 value={selectedCategory}
                 onValueChange={setSelectedCategory}
@@ -153,7 +154,7 @@ export default function Campaigns() {
             <div className="container mx-auto flex items-center gap-3 text-sm text-amber-700 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>
-                <span className="font-semibold">Demo mode</span> — Smart contracts not detected on Ganache.
+                <span className="font-semibold">Demo mode</span> — Smart contracts not reachable.
                 Deploy your contracts in Remix IDE and update{' '}
                 <code className="font-mono text-xs bg-amber-500/20 px-1.5 py-0.5 rounded">
                   src/lib/contractAddresses.ts

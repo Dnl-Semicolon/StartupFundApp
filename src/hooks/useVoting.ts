@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useWallet } from './useWallet';
 import { getCampaignVoting, CAMPAIGN_VOTING_ABI } from '@/lib/contracts';
 import { CONTRACT_ADDRESSES } from '@/lib/contractAddresses';
+import { chainTimestamp } from '@/lib/devRpc';
 
 export interface VoteStatus {
   approves:    number;
@@ -16,6 +17,10 @@ export interface VoteStatus {
 // Demo-mode: non-numeric campaign IDs (mock data: "c1", "pending-1")
 // route all state through localStorage so the Voting UI works without a live chain.
 const demoKey = (id: string) => `sf_demo_votes_${id}`;
+
+// Module-scoped: campaign IDs we've already attempted lazy auto-settle for.
+// Prevents repeat MetaMask popups when fetchStatus polls on a closed window.
+const autoSettleAttempted = new Set<string>();
 
 interface DemoState {
   approves:   number;
@@ -133,6 +138,17 @@ export function useVoting(campaignId: string | undefined) {
 
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
+  // Refetch when dev-panel warps the chain clock — voting state is time-sensitive.
+  // Also clear the auto-settle dedupe so post-warp closure can trigger settlement.
+  useEffect(() => {
+    const onWarp = () => {
+      if (campaignId) autoSettleAttempted.delete(campaignId);
+      fetchStatus();
+    };
+    window.addEventListener('sf:dev:warp', onWarp);
+    return () => window.removeEventListener('sf:dev:warp', onWarp);
+  }, [fetchStatus, campaignId]);
+
   const vote = useCallback(async (approve: boolean) => {
     if (!campaignId || !isConnected || !address) return;
     setIsTxPending(true);
@@ -212,6 +228,30 @@ export function useVoting(campaignId: string | undefined) {
       setIsTxPending(false);
     }
   }, [campaignId, isDemo, fetchStatus]);
+
+  // Lazy auto-settle: when the chain clock has passed windowEnd but settle()
+  // hasn't been called, the next visiting wallet silently triggers it.
+  // Solidity has no scheduler — without this, campaigns sit in PENDING forever.
+  // Uses chain.timestamp (not wall-clock) so dev-panel warps are respected.
+  useEffect(() => {
+    if (isDemo) return;
+    if (!campaignId || !isConnected) return;
+    if (!voteStatus) return;
+    if (voteStatus.isSettled) return;
+    if (voteStatus.windowEnd === 0) return;
+    if (autoSettleAttempted.has(campaignId)) return;
+    if (isTxPending) return;
+    let cancelled = false;
+    (async () => {
+      const chainNow = await chainTimestamp();
+      if (cancelled) return;
+      if (chainNow < voteStatus.windowEnd) return;
+      autoSettleAttempted.add(campaignId);
+      console.debug('[sf:vote] lazy auto-settle firing', { campaignId, chainNow, windowEnd: voteStatus.windowEnd });
+      settle();
+    })();
+    return () => { cancelled = true; };
+  }, [campaignId, isConnected, isDemo, voteStatus, isTxPending, settle]);
 
   // Silence unused-lint if the ABI import is kept for downstream typing
   void CAMPAIGN_VOTING_ABI;

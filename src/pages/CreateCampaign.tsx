@@ -46,7 +46,9 @@ export default function CreateCampaign() {
       const goalWei = parseEther(data.goalAmount.toString());
       const minWei  = parseEther(data.minContribution.toString());
 
-      // Convert date string "YYYY-MM-DD" → Unix timestamp (seconds)
+      // User's chosen deadline — sent to chain as-is. Contract accepts any
+      // future timestamp within 60 days. Time-warp dev panel handles demo
+      // fast-forward rather than client-side deadline hijacking.
       const deadline = Math.floor(new Date(data.deadline).getTime() / 1000);
 
       // Parse tags: split on commas, trim, lowercase, dedupe, drop empty
@@ -92,6 +94,7 @@ export default function CreateCampaign() {
       setShowSuccess(true);
       setTimeout(() => navigate(ROUTE_PATHS.DASHBOARD), 3000);
     } catch (err: unknown) {
+      console.error('sf:create:tx-failed', err);
       const raw = err as {
         shortMessage?: string; reason?: string;
         info?: { error?: { message?: string } };
@@ -104,8 +107,8 @@ export default function CreateCampaign() {
       );
 
       const friendly = (() => {
-        if (/Deadline must be at least 1 day/i.test(revertText))
-          return 'Deadline must be at least 1 day in the future.';
+        if (/Deadline must be in the future/i.test(revertText))
+          return 'Deadline must be in the future.';
         if (/Deadline cannot exceed 60 days/i.test(revertText))
           return 'Deadline cannot be more than 60 days out.';
         if (/Min contribution must be >= 0\.001 ETH/i.test(revertText))

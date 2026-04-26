@@ -7,7 +7,6 @@ import {
   Send,
   Wallet,
   AlertCircle,
-  Calendar as CalendarIcon,
   ArrowUpRight,
   Info,
   Flag
@@ -35,15 +34,14 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useWallet } from '@/hooks/useWallet';
 import { springPresets } from '@/lib/motion';
 
-// Contract business rules — enforced client-side so bad input never reaches the chain.
+// Contract floors — enforced in CampaignManager.sol. Deadline must be in the
+// future and within 60 days. Return By (profit-return deadline) must come AFTER
+// the campaign deadline.
 const MIN_CONTRIBUTION_ETH = 0.001;
-const MIN_DEADLINE_DAYS    = 1;
 const MAX_DEADLINE_DAYS    = 60;
 
 /**
@@ -64,18 +62,30 @@ const createCampaignSchema = z.object({
     const d = new Date(val);
     if (isNaN(d.getTime())) return false;
     const deltaDays = (d.getTime() - Date.now()) / 86_400_000;
-    return deltaDays >= MIN_DEADLINE_DAYS && deltaDays <= MAX_DEADLINE_DAYS;
+    return d.getTime() > Date.now() && deltaDays <= MAX_DEADLINE_DAYS;
   }, {
-    message: `Deadline must be between ${MIN_DEADLINE_DAYS} and ${MAX_DEADLINE_DAYS} days from today.`,
+    message: `Deadline must be in the future, within ${MAX_DEADLINE_DAYS} days.`,
   }),
   imageUrl: z.string().url("Please provide a valid image URL"),
   tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
   tags: z.string().optional(),
-  // Profit-return (optional — teammate scaffolding for future Feature 3)
   profitReturnRate: z.coerce.number().min(0).max(100).optional()
-    .or(z.literal('').transform(() => undefined)),
+    .or(z.literal('').transform((): undefined => undefined)),
   profitReturnDeadline: z.string().optional()
-    .or(z.literal('').transform(() => undefined)),
+    .or(z.literal('').transform((): undefined => undefined)),
+}).superRefine((data, ctx) => {
+  if (data.profitReturnDeadline) {
+    const ret = new Date(data.profitReturnDeadline);
+    const dl  = new Date(data.deadline);
+    if (isNaN(ret.getTime())) return;
+    if (ret <= dl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['profitReturnDeadline'],
+        message: 'Return By must be after the campaign deadline.',
+      });
+    }
+  }
 });
 
 type CreateCampaignValues = z.infer<typeof createCampaignSchema>;
@@ -93,7 +103,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
       imageUrl: '',
       tokenSymbol: '',
       tags: '',
-      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       profitReturnRate: undefined,
       profitReturnDeadline: '',
     },
@@ -210,43 +220,22 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                 control={form.control}
                 name="deadline"
                 render={({ field }) => {
-                  // Contract rule: must be 1..60 days from now. Calendar disables the rest.
-                  const minDate = new Date(Date.now() + MIN_DEADLINE_DAYS * 86_400_000);
+                  const minDate = new Date(Date.now() + 60_000);
                   const maxDate = new Date(Date.now() + MAX_DEADLINE_DAYS * 86_400_000);
-                  const selected = field.value ? new Date(field.value) : undefined;
                   return (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Campaign Deadline</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start font-normal",
-                                !selected && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {selected
-                                ? selected.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "Pick a date"}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selected}
-                            onSelect={(d) => field.onChange(d ? d.toISOString().split('T')[0] : '')}
-                            disabled={(d) => d < minDate || d > maxDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <DateTimePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          minDate={minDate}
+                          maxDate={maxDate}
+                          placeholder="Pick date & time"
+                        />
+                      </FormControl>
                       <FormDescription>
-                        Must be {MIN_DEADLINE_DAYS}–{MAX_DEADLINE_DAYS} days from today. Contract-enforced.
+                        Any future date & time within {MAX_DEADLINE_DAYS} days. Minute precision.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -297,18 +286,29 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                 <FormField
                   control={form.control}
                   name="profitReturnDeadline"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Return By
-                        <span className="text-muted-foreground text-xs font-normal ml-1">(optional)</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const deadlineVal = form.watch('deadline');
+                    const minDate = deadlineVal
+                      ? new Date(new Date(deadlineVal).getTime() + 60_000)
+                      : new Date(Date.now() + 60_000);
+                    return (
+                      <FormItem>
+                        <FormLabel>
+                          Return By
+                          <span className="text-muted-foreground text-xs font-normal ml-1">(optional)</span>
+                        </FormLabel>
+                        <FormControl>
+                          <DateTimePicker
+                            value={field.value || undefined}
+                            onChange={field.onChange}
+                            minDate={minDate}
+                            placeholder="After deadline"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               </div>
             </div>
@@ -604,6 +604,10 @@ export function RefundRequestForm({ campaignId, contributionAmount, onSubmit }: 
         {!isConnected ? (
           <Button onClick={connect} variant="outline" className="w-full">
             Connect Wallet to Claim Refund
+          </Button>
+        ) : contributionAmount <= 0 ? (
+          <Button disabled className="w-full" variant="outline">
+            You did not contribute to this campaign
           </Button>
         ) : (
           <Button

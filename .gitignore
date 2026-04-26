@@ -100,3 +100,5 @@ Thumbs.db
 uploaded_files/
 
 /src/lib/contractAddresses.ts
+.git.broken-backup/
+.claude/

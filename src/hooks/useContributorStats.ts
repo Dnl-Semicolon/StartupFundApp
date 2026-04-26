@@ -111,11 +111,12 @@ export function useContributorStats(): ContributorStats {
         const sf = getReadContract(CONTRACT_ADDRESSES.startupFund, STARTUPFUND_ABI);
         const addrLower = address!.toLowerCase();
 
-        // Query ALL events then filter client-side — more reliable than indexed filters on Ganache
+        // Query ALL events then filter client-side — more reliable than indexed filters on Ganache.
+        // Event names must match StartupFund.sol exactly: FundingReceived, RefundClaimed, TokensMinted.
         const [allFunded, allRefunded, allRewardMinted, tokenBalance] = await Promise.all([
-          sf.queryFilter(sf.filters.Funded(), 0),
-          sf.queryFilter(sf.filters.Refunded(), 0),
-          sf.queryFilter(sf.filters.RewardMinted(), 0),
+          sf.queryFilter(sf.filters.FundingReceived(), 0),
+          sf.queryFilter(sf.filters.RefundClaimed(), 0),
+          sf.queryFilter(sf.filters.TokensMinted(), 0),
           sf.tokenBalanceOf(address),
         ]);
 
@@ -154,7 +155,8 @@ export function useContributorStats(): ContributorStats {
           ...myRewards.map((e: any) => ({
             type: 'tokens' as const,
             campaignId: e.args.campaignId.toString(),
-            amount: parseFloat(formatEther(e.args.amount)).toFixed(4) + ' ETH',
+            // TokensMinted event field is `tokens`, not `amount`.
+            amount: parseFloat(formatEther(e.args.tokens)).toFixed(4) + ' SFT',
             txHash: e.transactionHash,
             blockNumber: e.blockNumber,
           })),

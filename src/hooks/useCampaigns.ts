@@ -3,6 +3,7 @@ import { formatEther } from 'ethers';
 import { getCampaignManager } from '@/lib/contracts';
 import { Campaign, CAMPAIGN_STATUS } from '@/lib/index';
 import { mockCampaigns } from '@/data/index';
+import { loadDemoState } from '@/lib/demoState';
 
 // Maps CampaignManager uint8 status → frontend string.
 // After the voting-gate redeploy: 0=PENDING, 1=ACTIVE, 2=FUNDED, 3=CANCELLED, 4=REJECTED.
@@ -14,28 +15,17 @@ const STATUS_MAP: Record<number, Campaign['status']> = {
   4: CAMPAIGN_STATUS.REJECTED,
 };
 
-/** Peels the optional "\n---meta\n{...json}" tail off a description and
- *  returns the cleaned description plus any structured metadata found. */
-function parseDescription(raw: string): {
-  description: string;
-  profitReturnRate?: number;
-  profitReturnDeadline?: string;
-} {
-  const marker = '\n---meta\n';
-  const idx = raw.lastIndexOf(marker);
-  if (idx === -1) return { description: raw };
-  const body = raw.slice(0, idx);
-  const tail = raw.slice(idx + marker.length).trim();
-  try {
-    const parsed = JSON.parse(tail) as { profitReturnRate?: number; profitReturnDeadline?: string };
-    return {
-      description: body,
-      profitReturnRate:     typeof parsed.profitReturnRate     === 'number' ? parsed.profitReturnRate     : undefined,
-      profitReturnDeadline: typeof parsed.profitReturnDeadline === 'string' ? parsed.profitReturnDeadline : undefined,
-    };
-  } catch {
-    return { description: raw };
-  }
+/** Merge a demoState override on top of a chain-derived Campaign.
+ *  Overlay wins: statusOverride (voting skip, disbursement, refund reclaim),
+ *  deadlineOverride (Option Y sub-1-day hijack). */
+function applyOverlay(campaign: Campaign): Campaign {
+  const ov = loadDemoState().overrides[campaign.id];
+  if (!ov) return campaign;
+  return {
+    ...campaign,
+    status:   ov.statusOverride   ?? campaign.status,
+    deadline: ov.deadlineOverride ?? campaign.deadline,
+  };
 }
 
 // Builds a minimal User from a wallet address
@@ -67,6 +57,13 @@ export function useCampaigns(): UseCampaignsResult {
 
   const refetch = useCallback(() => setTick(t => t + 1), []);
 
+  // Refetch when dev-panel warps the chain clock — campaign deadlines may flip.
+  useEffect(() => {
+    const onWarp = () => refetch();
+    window.addEventListener('sf:dev:warp', onWarp);
+    return () => window.removeEventListener('sf:dev:warp', onWarp);
+  }, [refetch]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -84,14 +81,18 @@ export function useCampaigns(): UseCampaignsResult {
         const fetched: Campaign[] = [];
 
         for (let i = 0; i < count; i++) {
-          const [meta, stats, desc, tags] = await Promise.all([
+          const [meta, stats, desc, tags, profitTerms] = await Promise.all([
             cm.getCampaignMeta(i),
             cm.getCampaignStats(i),
             cm.getCampaignDescription(i),
             cm.getCampaignTags(i),
+            cm.getProfitTerms(i),
           ]);
 
-          const parsedDesc = parseDescription(desc as string);
+          // Profit fields are now first-class on-chain. Falls back to undefined
+          // when both are 0 (= no profit return promised).
+          const rateNum     = Number(profitTerms.rate ?? profitTerms[0]);
+          const returnDlSec = Number(profitTerms.returnDeadline ?? profitTerms[1]);
 
           fetched.push({
             id:               i.toString(),
@@ -99,9 +100,9 @@ export function useCampaigns(): UseCampaignsResult {
             creator:          addrToUser(meta.creator as string),
             title:            meta.title as string,
             slug:             meta.slug as string,
-            description:      parsedDesc.description,
-            profitReturnRate: parsedDesc.profitReturnRate,
-            profitReturnDeadline: parsedDesc.profitReturnDeadline,
+            description:      desc as string,
+            profitReturnRate:     rateNum > 0 ? rateNum : undefined,
+            profitReturnDeadline: returnDlSec > 0 ? new Date(returnDlSec * 1000).toISOString() : undefined,
             shortDescription: meta.shortDescription as string,
             goalAmount:       parseFloat(formatEther(stats.goalAmount as bigint)),
             raisedAmount:     parseFloat(formatEther(stats.raisedAmount as bigint)),
@@ -120,9 +121,18 @@ export function useCampaigns(): UseCampaignsResult {
         }
 
         if (!cancelled) {
-          console.debug('[sf:campaigns] loaded', fetched.length, 'campaigns from chain',
-            fetched.map(c => ({ id: c.id, status: c.status, creator: c.creatorId })));
-          setCampaigns(fetched);
+          const overlaidChain = fetched.map(applyOverlay);
+          // Always merge demo-seeded mock campaigns on top of chain data —
+          // they cover UI states the chain alone can't show (CANCELLED,
+          // REJECTED, overdue-disbursement, diverse contributor lists) and
+          // give the Discover page rich content for screenshots. Chain IDs
+          // are numeric strings; mock IDs are non-numeric, so no collision.
+          const mocksWithOverlay = mockCampaigns.map(applyOverlay);
+          const merged = [...overlaidChain, ...mocksWithOverlay];
+          console.debug('[sf:campaigns] merged',
+            overlaidChain.length, 'chain +', mocksWithOverlay.length, 'mock campaigns',
+            merged.map(c => ({ id: c.id, status: c.status })));
+          setCampaigns(merged);
           setIsMockData(false);
         }
       } catch (err) {
@@ -144,12 +154,13 @@ export function useCampaigns(): UseCampaignsResult {
            err.message.includes('ECONNREFUSED'));
 
         if (isContractError) {
-          // Apply any demo-mode flag overrides stored in localStorage
-          const withOverrides = mockCampaigns.map(c =>
-            localStorage.getItem(`sf_demo_flagged_${c.id}`) === 'true'
+          // Mock-data fallback still respects demo-state overlays
+          const withOverrides = mockCampaigns.map(c => {
+            const withFlag = localStorage.getItem(`sf_demo_flagged_${c.id}`) === 'true'
               ? { ...c, status: CAMPAIGN_STATUS.FLAGGED as Campaign['status'] }
-              : c
-          );
+              : c;
+            return applyOverlay(withFlag);
+          });
           setCampaigns(withOverrides);
           setIsMockData(true);
           setError(null); // don't show error — mock data handles it gracefully

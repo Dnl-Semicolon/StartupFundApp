@@ -11,36 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { useVoting } from '@/hooks/useVoting';
 import { useWallet } from '@/hooks/useWallet';
 import { useRegistration } from '@/hooks/useRegistration';
+import { useChainNow } from '@/hooks/useChainNow';
 import { fadeInUp } from '@/lib/motion';
 
 interface VotingPanelProps {
   campaignId: string;
   /** Creator wallet — if it matches the connected wallet, vote buttons are disabled. */
   creatorAddress?: string;
-}
-
-/**
- * Self-cleaning countdown tied to an absolute unix timestamp (seconds).
- * Re-reads wall-clock each tick, so tab-sleep doesn't cause drift.
- */
-function useCountdown(windowEndSeconds: number): number {
-  const [remaining, setRemaining] = useState(() =>
-    Math.max(0, windowEndSeconds - Math.floor(Date.now() / 1000))
-  );
-
-  useEffect(() => {
-    setRemaining(Math.max(0, windowEndSeconds - Math.floor(Date.now() / 1000)));
-    if (windowEndSeconds <= Math.floor(Date.now() / 1000)) return;
-
-    const id = setInterval(() => {
-      const next = Math.max(0, windowEndSeconds - Math.floor(Date.now() / 1000));
-      setRemaining(next);
-      if (next === 0) clearInterval(id);
-    }, 1000);
-    return () => clearInterval(id);
-  }, [windowEndSeconds]);
-
-  return remaining;
 }
 
 function fmtCountdown(secs: number): string {
@@ -63,7 +40,8 @@ export function VotingPanel({ campaignId, creatorAddress }: VotingPanelProps) {
   } = useVoting(campaignId);
 
   const windowEnd  = voteStatus?.windowEnd ?? 0;
-  const remaining  = useCountdown(windowEnd);
+  const chainNow   = useChainNow();
+  const remaining  = Math.max(0, windowEnd - chainNow);
   const windowOpen = remaining > 0 && !voteStatus?.isSettled;
   const canSettle  = !windowOpen && !voteStatus?.isSettled && voteStatus !== null;
   const isCreator  = !!address && !!creatorAddress &&
@@ -238,6 +216,7 @@ export function VotingPanel({ campaignId, creatorAddress }: VotingPanelProps) {
               }
             </Button>
           )}
+
         </CardContent>
       </Card>
     </motion.div>

@@ -70,6 +70,8 @@ export interface Campaign {
   tags?: string[];
   profitReturnRate?: number;       // 0..100 (%). Stored in description JSON tail.
   profitReturnDeadline?: string;   // ISO date. Stored in description JSON tail.
+  /** Optional seeded contributor list for mock campaigns (off-chain). */
+  contributors?: Array<{ address: string; amount: number }>;
 }
 
 export interface Contribution {

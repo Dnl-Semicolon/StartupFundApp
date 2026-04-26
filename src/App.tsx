@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ROUTE_PATHS } from "@/lib/index";
 import { Layout } from "@/components/Layout";
+import { DevPanel } from "@/components/DevPanel";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Home from "@/pages/Home";
 import Campaigns from "@/pages/Campaigns";
@@ -67,6 +68,7 @@ export default function App() {
               <Route path="*"                            element={<NotFound />} />
             </Routes>
           </Layout>
+          <DevPanel />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

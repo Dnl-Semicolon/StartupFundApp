@@ -71,8 +71,8 @@ export default function TermsOfServices() {
 
           <Section title="3. Platform Description">
             <p>
-              StartupFund is a decentralized crowdfunding platform deployed on the Ethereum blockchain (Ganache
-              local testnet for this version). The Platform facilitates:
+              StartupFund is a decentralized crowdfunding platform deployed on the Ethereum blockchain
+              (development testnet for this version). The Platform facilitates:
             </p>
             <ul className="list-disc list-inside space-y-1 pl-2">
               <li>Creation of fundraising campaigns by registered entrepreneurs</li>

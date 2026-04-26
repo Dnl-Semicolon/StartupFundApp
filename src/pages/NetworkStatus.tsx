@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Activity, RefreshCw, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { JsonRpcProvider } from 'ethers';
 import { CONTRACT_ADDRESSES, CHAIN_ID } from '@/lib/contractAddresses';
@@ -155,7 +155,7 @@ export default function NetworkStatus() {
             </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Network Status</h1>
             <p className="text-muted-foreground">
-              Real-time status of the Ganache local blockchain and deployed smart contracts.
+              Real-time status of the blockchain RPC and deployed smart contracts.
             </p>
           </motion.div>
         </div>
@@ -262,9 +262,9 @@ export default function NetworkStatus() {
               animate={{ opacity: 1 }}
               className="border border-destructive/30 bg-destructive/10 rounded-xl p-5 text-sm"
             >
-              <p className="font-semibold text-destructive mb-2">Ganache is not reachable</p>
+              <p className="font-semibold text-destructive mb-2">The chain is not reachable</p>
               <p className="text-muted-foreground">
-                Make sure Ganache is running on <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">http://127.0.0.1:7545</code> and that you have deployed the contracts via Remix IDE. Check the{' '}
+                Make sure your development chain is running at <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">http://127.0.0.1:7545</code> and that the contracts have been deployed. See the{' '}
                 <Link to={ROUTE_PATHS.FAQ} className="text-primary hover:underline">FAQ</Link> for setup instructions.
               </p>
             </motion.div>
@@ -279,7 +279,7 @@ export default function NetworkStatus() {
             >
               <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-2">Chain ID mismatch</p>
               <p className="text-muted-foreground">
-                The RPC endpoint returned Chain ID <strong>{state.chainId}</strong>, but StartupFund expects <strong>{CHAIN_ID}</strong> (Ganache). In MetaMask, set the custom network RPC to <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">http://127.0.0.1:7545</code> with Chain ID <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{CHAIN_ID}</code>.
+                The RPC endpoint returned Chain ID <strong>{state.chainId}</strong>, but StartupFund expects <strong>{CHAIN_ID}</strong>. In MetaMask, set the custom network RPC to <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">http://127.0.0.1:7545</code> with Chain ID <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{CHAIN_ID}</code>.
               </p>
             </motion.div>
           )}
@@ -293,7 +293,7 @@ export default function NetworkStatus() {
           >
             <p className="font-semibold text-foreground mb-2">About this check</p>
             <p>
-              Status is determined by connecting to the Ganache RPC endpoint and calling <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">eth_getCode</code> for each contract address. A contract with no deployed bytecode ("0x") is shown as <em>Not found</em>.
+              Status is determined by connecting to the chain RPC endpoint and calling <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">eth_getCode</code> for each contract address. A contract with no deployed bytecode ("0x") is shown as <em>Not found</em>.
             </p>
             <p className="mt-2">
               This check runs entirely in your browser — no data is sent to any external server.

@@ -231,7 +231,7 @@ export default function Dashboard() {
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            <strong>Demo mode</strong> — Ganache not detected. Stats show on-chain data only when contracts are reachable.
+            <strong>Demo mode</strong> — chain not reachable. Stats show on-chain data only when contracts are live.
           </span>
         </motion.div>
       )}

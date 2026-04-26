@@ -11,9 +11,9 @@ import {
   Info,
   ShieldCheck
 } from 'lucide-react';
-import { SiX, SiLinkedin, SiGithub } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROUTE_PATHS } from '@/lib';
+import { CONTRACT_ADDRESSES } from '@/lib/contractAddresses';
 import { useWallet } from '@/hooks/useWallet';
 import { useRegistration } from '@/hooks/useRegistration';
 import { Button } from '@/components/ui/button';
@@ -224,7 +224,7 @@ export function Layout({ children }: LayoutProps) {
               className="w-full bg-destructive/95 text-destructive-foreground text-center text-sm py-2.5 px-4 font-medium backdrop-blur-sm"
             >
               Wrong network detected — please switch MetaMask to{' '}
-              <span className="font-bold">Ganache (Chain ID: 1337)</span>
+              <span className="font-bold">Chain ID: 1337</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -255,52 +255,44 @@ export function Layout({ children }: LayoutProps) {
               <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                 Empowering the next generation of entrepreneurs through decentralized crowdfunding and blockchain transparency.
               </p>
-              <div className="flex items-center gap-4">
-                <a href="#" className="p-2 rounded-full bg-accent hover:bg-primary hover:text-primary-foreground transition-all">
-                  <SiX className="w-4 h-4" />
-                </a>
-                <a href="#" className="p-2 rounded-full bg-accent hover:bg-primary hover:text-primary-foreground transition-all">
-                  <SiLinkedin className="w-4 h-4" />
-                </a>
-                <a href="#" className="p-2 rounded-full bg-accent hover:bg-primary hover:text-primary-foreground transition-all">
-                  <SiGithub className="w-4 h-4" />
-                </a>
-              </div>
             </div>
 
             <div>
               <h4 className="font-bold mb-6">Platform</h4>
               <ul className="space-y-4 text-sm text-muted-foreground">
-                <li><Link to={ROUTE_PATHS.CAMPAIGNS} className="hover:text-primary transition-colors">Browse Projects</Link></li>
-                <li><Link to={ROUTE_PATHS.CREATE_CAMPAIGN} className="hover:text-primary transition-colors">Launch a Campaign</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">Success Stories</Link></li>
+                <li><Link to={ROUTE_PATHS.CAMPAIGNS}        className="hover:text-primary transition-colors">Browse Projects</Link></li>
+                <li><Link to={ROUTE_PATHS.CREATE_CAMPAIGN}  className="hover:text-primary transition-colors">Launch a Campaign</Link></li>
+                <li><Link to={ROUTE_PATHS.DASHBOARD}        className="hover:text-primary transition-colors">Your Dashboard</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-bold mb-6">Resources</h4>
               <ul className="space-y-4 text-sm text-muted-foreground">
-                <li><Link to={ROUTE_PATHS.ABOUT} className="hover:text-primary transition-colors">About Us</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">Whitepaper</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">FAQ</Link></li>
-                <li><Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link to={ROUTE_PATHS.ABOUT}            className="hover:text-primary transition-colors">About Us</Link></li>
+                <li><Link to={ROUTE_PATHS.FAQ}              className="hover:text-primary transition-colors">FAQ</Link></li>
+                <li><Link to={ROUTE_PATHS.TERMS_OF_SERVICE} className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link to={ROUTE_PATHS.NETWORK_STATUS}   className="hover:text-primary transition-colors">Network Status</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-bold mb-6">Security</h4>
-              <div className="bg-card border border-border rounded-xl p-4">
+              <h4 className="font-bold mb-6">On-Chain</h4>
+              <Link
+                to={ROUTE_PATHS.NETWORK_STATUS}
+                className="block bg-card border border-border rounded-xl p-4 hover:border-primary/40 transition-colors"
+              >
                 <div className="flex items-center gap-3 mb-3">
                   <ShieldCheck className="w-5 h-5 text-chart-2" />
-                  <span className="text-sm font-semibold">Audit Verified</span>
+                  <span className="text-sm font-semibold">On-Chain</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Our smart contracts are audited for maximum security of your funds and reward tokens.
+                  Live addresses for every platform contract. Click to inspect.
                 </p>
                 <Badge variant="secondary" className="mt-4 w-full justify-center py-1 text-[10px] font-mono">
-                  CONTRACT: 0x89...342F
+                  StartupFund: {CONTRACT_ADDRESSES.startupFund.slice(0, 8)}…{CONTRACT_ADDRESSES.startupFund.slice(-6)}
                 </Badge>
-              </div>
+              </Link>
             </div>
           </div>
 

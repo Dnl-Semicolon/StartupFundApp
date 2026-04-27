@@ -22,10 +22,11 @@ export const ACCESS_CONTROL_ABI = [
 ];
 
 export const STARTUPFUND_ABI = [
-  // Write — campaigns. Profit terms are attached separately via setProfitTerms()
-  // because of EVM stack-depth limits on a single 13-arg function.
-  'function createCampaign(string title, string slug, string description, string shortDescription, string imageUrl, string category, uint256 goalAmount, uint256 minContribution, uint256 deadline, string tokenSymbol, string[] tags) external returns (uint256)',
+  // Write — campaigns. tokenSymbol dropped (RewardToken stays but cosmetic).
+  // Profit terms attached separately via setProfitTerms() (stack-depth dodge).
+  'function createCampaign(string title, string slug, string description, string shortDescription, string imageUrl, string category, uint256 goalAmount, uint256 minContribution, uint256 deadline, string[] tags) external returns (uint256)',
   'function setProfitTerms(uint256 campaignId, uint256 rate, uint256 returnDeadline) external',
+  'function editCampaign(uint256 campaignId, string newTitle, string newSlug, string newDescription, string newShortDescription, string newImageUrl, string newCategory, string[] newTags) external',
   'function fundCampaign(uint256 campaignId) external payable',
   'function withdraw(uint256 campaignId) external',
   'function claimRefund(uint256 campaignId) external',
@@ -60,7 +61,7 @@ export const STARTUPFUND_ABI = [
 export const CAMPAIGN_MANAGER_ABI = [
   'function campaignCount() external view returns (uint256)',
   'function getCampaignMeta(uint256 campaignId) external view returns (uint256 id, address creator, string title, string slug, string shortDescription, string imageUrl, string category)',
-  'function getCampaignStats(uint256 campaignId) external view returns (uint256 goalAmount, uint256 raisedAmount, uint256 minContribution, uint256 deadline, uint8 status, string tokenSymbol, uint256 backersCount)',
+  'function getCampaignStats(uint256 campaignId) external view returns (uint256 goalAmount, uint256 raisedAmount, uint256 minContribution, uint256 deadline, uint8 status, uint256 backersCount)',
   'function getCampaignDescription(uint256 campaignId) external view returns (string)',
   'function getCampaignTags(uint256 campaignId) external view returns (string[])',
   'function getStatus(uint256 campaignId) external view returns (uint8)',

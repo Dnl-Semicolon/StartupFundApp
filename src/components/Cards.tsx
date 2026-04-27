@@ -9,7 +9,8 @@ import {
   TrendingDown,
   Flag,
   Clock,
-  XCircle
+  XCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { Campaign, CAMPAIGN_STATUS, ROUTE_PATHS } from '@/lib/index';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -25,10 +26,14 @@ interface CampaignCardProps {
 export function CampaignCard({ campaign }: CampaignCardProps) {
   const progress = Math.min(Math.round((campaign.raisedAmount / campaign.goalAmount) * 100), 100);
   const daysLeft = Math.max(0, Math.ceil((new Date(campaign.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-  const isFlagged  = campaign.status === CAMPAIGN_STATUS.FLAGGED;
-  const isPending  = campaign.status === CAMPAIGN_STATUS.PENDING;
-  const isRejected = campaign.status === CAMPAIGN_STATUS.REJECTED;
-  const isDimmed   = isFlagged || isRejected;
+  const isFlagged   = campaign.status === CAMPAIGN_STATUS.FLAGGED;
+  const isPending   = campaign.status === CAMPAIGN_STATUS.PENDING;
+  const isRejected  = campaign.status === CAMPAIGN_STATUS.REJECTED;
+  const isCancelled = campaign.status === CAMPAIGN_STATUS.CANCELLED;
+  const isFunded    = campaign.status === CAMPAIGN_STATUS.FUNDED;
+  // Greyed = "shown but cannot/should-not engage". Funded shown distinctly so
+  // backers still find it post-success but realise it's not fundable any more.
+  const isGreyed    = isCancelled || isFlagged || isRejected || isFunded;
 
   return (
     <motion.div
@@ -37,9 +42,11 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     >
       <Card className={cn(
         "overflow-hidden border-border bg-card/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full",
-        isFlagged  && "border-red-300 dark:border-red-800 opacity-80",
-        isPending  && "border-amber-500/30 dark:border-amber-500/40",
-        isRejected && "border-red-500/30 dark:border-red-700 opacity-70",
+        isFlagged   && "border-red-300 dark:border-red-800 opacity-60",
+        isPending   && "border-amber-500/30 dark:border-amber-500/40",
+        isRejected  && "border-red-500/30 dark:border-red-700 opacity-50",
+        isCancelled && "border-orange-300 dark:border-orange-800 opacity-60",
+        isFunded    && "border-emerald-400/40 dark:border-emerald-700",
       )}>
         <div className="relative aspect-video overflow-hidden">
           <img
@@ -47,7 +54,8 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             alt={campaign.title}
             className={cn(
               "object-cover w-full h-full transition-transform duration-500 hover:scale-105",
-              isDimmed && "grayscale-[40%]",
+              isGreyed  && !isFunded && "grayscale",
+              isFunded  && "saturate-150",
               isPending && "saturate-75",
             )}
           />
@@ -78,6 +86,22 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
               </Badge>
             </div>
           )}
+          {isCancelled && (
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-orange-600 text-white flex items-center gap-1 shadow-lg">
+                <XCircle className="w-3 h-3" />
+                Cancelled
+              </Badge>
+            </div>
+          )}
+          {isFunded && (
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-emerald-600 text-white flex items-center gap-1 shadow-lg">
+                <CheckCircle2 className="w-3 h-3" />
+                Funded
+              </Badge>
+            </div>
+          )}
         </div>
 
         <CardHeader className="p-5 pb-0">
@@ -97,6 +121,18 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 mb-2">
               <XCircle className="w-3 h-3 shrink-0" />
               Declined by community. Cannot accept contributions.
+            </div>
+          )}
+          {isCancelled && (
+            <div className="flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-md px-3 py-2 mb-2">
+              <XCircle className="w-3 h-3 shrink-0" />
+              Deadline passed without meeting goal. Backers refunded.
+            </div>
+          )}
+          {isFunded && (
+            <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-md px-3 py-2 mb-2">
+              <CheckCircle2 className="w-3 h-3 shrink-0" />
+              Goal reached. Closed to new contributions.
             </div>
           )}
           <div className="flex justify-between items-start mb-2">
@@ -134,12 +170,14 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
           <Button
             asChild
             className="w-full group"
-            variant={isFlagged || isRejected ? 'destructive' : 'outline'}
+            variant={isFlagged || isRejected || isCancelled ? 'destructive' : 'outline'}
           >
             <Link to={ROUTE_PATHS.CAMPAIGN_DETAIL.replace(':id', campaign.id)}>
-              {isFlagged  ? 'View & Claim Refund'
-                : isPending  ? 'View & Track Vote'
-                : isRejected ? 'View Rejection'
+              {isFlagged   ? 'View & Claim Refund'
+                : isPending   ? 'View & Track Vote'
+                : isRejected  ? 'View Rejection'
+                : isCancelled ? 'View & Claim Refund'
+                : isFunded    ? 'View Funded Campaign'
                 : 'View Campaign'}
               <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
             </Link>

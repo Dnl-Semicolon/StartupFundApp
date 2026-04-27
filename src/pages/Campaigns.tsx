@@ -27,19 +27,32 @@ const SORT_OPTIONS = [
   { label: 'Most Funded', value: 'raised_high' },
 ];
 
+type DiscoverTab = 'fundable' | 'voting';
+
 export default function Campaigns() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
+  const [activeTab, setActiveTab] = useState<DiscoverTab>('fundable');
   const { campaigns, loading, error, isMockData } = useCampaigns();
   const featured = useFeatured(campaigns);
 
   const filteredCampaigns = useMemo(() => {
     return campaigns
       .filter((campaign) => {
-        // REJECTED is terminal — hide from everyone (no further action possible).
+        // REJECTED terminal — hide everywhere (no further action possible).
         if (campaign.status === CAMPAIGN_STATUS.REJECTED) return false;
-        // PENDING campaigns must be visible so community can find + vote on them.
-        // The amber "Awaiting Vote" badge on CampaignCard already signals status.
+
+        // Tab-based primary filter: split fundable (ACTIVE pre-deadline pre-goal)
+        // from voting (PENDING). Cancelled/Funded/Flagged are still visible but
+        // greyed in CampaignCard so users see what NOT to engage with.
+        if (activeTab === 'voting') {
+          if (campaign.status !== CAMPAIGN_STATUS.PENDING) return false;
+        } else {
+          // 'fundable' tab: hide PENDING. Show ACTIVE/FUNDED/CANCELLED/FLAGGED
+          // (the latter three render greyed via CampaignCard).
+          if (campaign.status === CAMPAIGN_STATUS.PENDING) return false;
+        }
+
         return selectedCategory === 'All' || campaign.category === selectedCategory;
       })
       .sort((a, b) => {
@@ -62,7 +75,7 @@ export default function Campaigns() {
             return 0;
         }
       });
-  }, [campaigns, selectedCategory, sortBy]);
+  }, [campaigns, selectedCategory, sortBy, activeTab]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,6 +101,26 @@ export default function Campaigns() {
 
       {/* Spotlight — top funded, rising fast, top creator, category chips */}
       {!loading && campaigns.length > 0 && <FeaturedSection featured={featured} />}
+
+      {/* Primary tab: Fundable vs Voting */}
+      <section className="container mx-auto px-4 pt-2">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DiscoverTab)}>
+          <TabsList className="bg-secondary/50 p-1">
+            <TabsTrigger
+              value="fundable"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6"
+            >
+              Fundable
+            </TabsTrigger>
+            <TabsTrigger
+              value="voting"
+              className="data-[state=active]:bg-amber-500 data-[state=active]:text-white px-6"
+            >
+              Voting
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </section>
 
       {/* Filter Bar */}
       <section className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b border-border py-4">

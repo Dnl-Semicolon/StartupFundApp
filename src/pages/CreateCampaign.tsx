@@ -82,7 +82,6 @@ export default function CreateCampaign() {
         goalWei,
         minWei,
         deadline,
-        data.tokenSymbol,
         tags,
       );
       await tx.wait();

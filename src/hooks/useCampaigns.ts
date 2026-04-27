@@ -114,7 +114,7 @@ export function useCampaigns(): UseCampaignsResult {
             updatedAt:        '',
             backersCount:     Number(stats.backersCount),
             milestones:       [],
-            tokenRewardSymbol: stats.tokenSymbol as string,
+            tokenRewardSymbol: '', // tokenSymbol field removed from contract
             minContribution:  parseFloat(formatEther(stats.minContribution as bigint)),
             tags:             tags as string[],
           });

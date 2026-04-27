@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getStartupFund } from '@/lib/contracts';
 import { motion } from 'framer-motion';
 import {
@@ -53,6 +53,7 @@ const fadeInUp = {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { isConnected, address, balance, shortAddress, connect } = useWallet();
   const { isRegistered, isRegistering, register } = useRegistration();
   const { campaigns, isMockData } = useCampaigns();
@@ -429,7 +430,10 @@ export default function Dashboard() {
                     const daysLeft = Math.max(0, Math.ceil((new Date(c.deadline).getTime() - Date.now()) / 86400000));
                     const canEdit  = c.backersCount === 0 && c.status === CAMPAIGN_STATUS.ACTIVE;
                     return (
-                      <Card key={c.id} className={`border ${
+                      <Card
+                        key={c.id}
+                        onClick={() => navigate(`/campaigns/${c.id}`)}
+                        className={`border cursor-pointer transition-shadow hover:shadow-md ${
                         c.status === CAMPAIGN_STATUS.FUNDED   ? 'border-green-300 bg-green-50/30 dark:bg-green-950/10' :
                         c.status === CAMPAIGN_STATUS.FLAGGED  ? 'border-red-300 bg-red-50/30 dark:bg-red-950/10' :
                         c.status === CAMPAIGN_STATUS.CANCELLED? 'border-orange-300 bg-orange-50/30 dark:bg-orange-950/10' :
@@ -439,12 +443,9 @@ export default function Dashboard() {
                           {/* Title row */}
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <Link
-                                to={`/campaigns/${c.id}`}
-                                className="font-semibold hover:text-primary transition-colors line-clamp-1"
-                              >
+                              <span className="font-semibold hover:text-primary transition-colors line-clamp-1">
                                 {c.title}
-                              </Link>
+                              </span>
                               <div className="flex items-center gap-2 mt-1">
                                 <Badge
                                   variant="outline"
@@ -464,7 +465,7 @@ export default function Dashboard() {
                                 )}
                               </div>
                             </div>
-                            <div className="flex gap-1 shrink-0">
+                            <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                               {canEdit && (
                                 <Link to={ROUTE_PATHS.EDIT_CAMPAIGN.replace(':id', c.id)}>
                                   <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1">

@@ -67,7 +67,6 @@ const createCampaignSchema = z.object({
     message: `Deadline must be in the future, within ${MAX_DEADLINE_DAYS} days.`,
   }),
   imageUrl: z.string().url("Please provide a valid image URL"),
-  tokenSymbol: z.string().min(2, "Min 2 chars").max(6, "Max 6 chars").regex(/^[A-Z]+$/, "Uppercase letters only"),
   tags: z.string().optional(),
   profitReturnRate: z.coerce.number().min(0).max(100).optional()
     .or(z.literal('').transform((): undefined => undefined)),
@@ -101,7 +100,6 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
       goalAmount: 1,
       minContribution: 0.01,
       imageUrl: '',
-      tokenSymbol: '',
       tags: '',
       deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       profitReturnRate: undefined,
@@ -169,7 +167,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                 )}
               />
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="goalAmount"
@@ -191,24 +189,6 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                       <FormLabel>Min. Entry (ETH)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tokenSymbol"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Token Symbol</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g. EFLOW"
-                          maxLength={6}
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -264,10 +244,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                   name="profitReturnRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Profit Return %
-                        <span className="text-muted-foreground text-xs font-normal ml-1">(optional)</span>
-                      </FormLabel>
+                      <FormLabel>Profit Return %</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -293,10 +270,7 @@ export function CreateCampaignForm({ onSubmit, isSubmitting = false }: { onSubmi
                       : new Date(Date.now() + 60_000);
                     return (
                       <FormItem>
-                        <FormLabel>
-                          Return By
-                          <span className="text-muted-foreground text-xs font-normal ml-1">(optional)</span>
-                        </FormLabel>
+                        <FormLabel>Return By</FormLabel>
                         <FormControl>
                           <DateTimePicker
                             value={field.value || undefined}

@@ -5,6 +5,8 @@ import { ArrowLeft, Lock, Pencil, CheckCircle2 } from 'lucide-react';
 import { ROUTE_PATHS } from '@/lib/index';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useWallet } from '@/hooks/useWallet';
+import { getStartupFund, ensureRegistered } from '@/lib/contracts';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,24 +51,51 @@ function EditForm({ campaign, onSaved }: { campaign: any; onSaved: () => void })
     }
 
     setSaving(true);
+    try {
+      // Real on-chain edit via StartupFund.editCampaign passthrough.
+      // Goal/deadline/min/profit-terms stay locked — only text fields update.
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const tagsArr: string[] = Array.isArray(campaign.tags)
+        ? campaign.tags
+        : typeof campaign.tags === 'string'
+          ? campaign.tags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+          : [];
 
-    // Store edits in localStorage — useCampaigns overlay applies them on next load
-    const editPayload = {
-      title:               title.trim(),
-      shortDescription:    shortDescription.trim(),
-      description:         description.trim(),
-      imageUrl:            imageUrl.trim(),
-      profitReturnRate:    profitReturnRate !== '' ? Number(profitReturnRate) : undefined,
-      profitReturnDeadline: profitReturnDeadline || undefined,
-      editedAt:            new Date().toISOString(),
-    };
+      const sf = await getStartupFund(true);
+      // Best-effort registration check (creator should already be registered).
+      try { await ensureRegistered((sf as unknown as { runner?: { address?: string } }).runner?.address ?? ''); } catch { /* ignored */ }
 
-    localStorage.setItem(`sf_campaign_edit_${campaign.id}`, JSON.stringify(editPayload));
-
-    // Brief artificial delay so the user sees "Saving…" feedback
-    await new Promise(r => setTimeout(r, 600));
-    setSaving(false);
-    onSaved();
+      const tx = await (sf as unknown as {
+        editCampaign: (
+          id: bigint, title: string, slug: string, description: string,
+          shortDescription: string, imageUrl: string, category: string, tags: string[],
+        ) => Promise<{ wait: () => Promise<unknown> }>;
+      }).editCampaign(
+        BigInt(campaign.id),
+        title.trim(),
+        slug,
+        description.trim(),
+        shortDescription.trim(),
+        imageUrl.trim(),
+        campaign.category,
+        tagsArr,
+      );
+      await tx.wait();
+      toast.success('Campaign updated on chain.');
+      onSaved();
+    } catch (err) {
+      console.error('sf:edit:tx-failed', err);
+      const raw = err as { shortMessage?: string; reason?: string; message?: string };
+      const txt = raw?.shortMessage ?? raw?.reason ?? raw?.message ?? 'Edit failed.';
+      const friendly =
+        /Already has backers/i.test(txt) ? 'Campaign already has contributors — editing is locked.' :
+        /Only creator/i.test(txt)        ? 'Only the campaign creator can edit.' :
+        /user rejected|ACTION_REJECTED/i.test(txt) ? 'Transaction cancelled.' :
+        txt;
+      setError(friendly);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -115,38 +144,29 @@ function EditForm({ campaign, onSaved }: { campaign: any; onSaved: () => void })
             )}
           </div>
 
-          {/* Profit return (read-only if already set via description metadata — shown for context) */}
+          {/* Profit return — locked once set on chain. Shown for context only. */}
           <div className="grid grid-cols-2 gap-3 pt-2 border-t">
             <div>
-              <label className="text-sm font-medium">Profit Return Rate (%)</label>
-              <div className="relative mt-1">
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="100"
-                  placeholder="e.g. 15"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={profitReturnRate}
-                  onKeyDown={ev => { if (ev.key === '-') ev.preventDefault(); }}
-                  onChange={e => {
-                    const v = e.target.value;
-                    // Prevent negative sign being typed
-                    if (!v.startsWith('-')) setRate(v);
-                  }}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Profit Return Deadline</label>
+              <label className="text-sm font-medium text-muted-foreground">Profit Return Rate (%)</label>
               <input
-                type="date"
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={profitReturnDeadline}
-                onChange={e => setDate(e.target.value)}
+                readOnly
+                disabled
+                className="mt-1 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm opacity-60"
+                value={profitReturnRate || '—'}
               />
             </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Profit Return Deadline</label>
+              <input
+                readOnly
+                disabled
+                className="mt-1 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm opacity-60"
+                value={profitReturnDeadline ? new Date(profitReturnDeadline).toLocaleDateString() : '—'}
+              />
+            </div>
+            <p className="col-span-2 text-[10px] text-muted-foreground -mt-1">
+              Profit-return terms are immutable once set on chain.
+            </p>
           </div>
         </div>
 
